@@ -512,7 +512,8 @@ function findAdjacentEdges(object){
 const textureLoader = new THREE.TextureLoader();
 
 function applyMaterial(value){
-  const applyToAll = document.getElementById('apply-to-all').checked;
+  const applyToAllCheckbox = document.getElementById('apply-to-all');
+  const applyToAll = applyToAllCheckbox.checked;
   let group = [];
   
   if(applyToAll){
@@ -521,6 +522,10 @@ function applyMaterial(value){
       return;
     }
     group = allMeshes;
+    
+    // === НОВОЕ: Снимаем галочку сразу после того, как решили красить всё ===
+    applyToAllCheckbox.checked = false;
+    
   }else{
     if(selectedObjects.length === 0){
       alert('Сначала кликните по детали (или по нескольким с зажатым Ctrl) в 3D-сцене');
@@ -568,6 +573,8 @@ function resetModel(){
     mats.forEach(m => m.needsUpdate = true);
   });
   selectedObjects = [];
+  // Снимаем галочку при сбросе, чтобы состояние было чистым
+  document.getElementById('apply-to-all').checked = false;
 }
 
 const raycaster = new THREE.Raycaster();
@@ -679,7 +686,6 @@ function openModal() {
 
 function closeModal() {
   modal.classList.remove('show');
-  // Запоминаем, что пользователь видел инструкцию
   localStorage.setItem('configurator_help_seen', 'true');
 }
 
@@ -687,12 +693,10 @@ helpBtn.addEventListener('click', openModal);
 closeBtn.addEventListener('click', closeModal);
 okBtn.addEventListener('click', closeModal);
 
-// Закрытие при клике на затемненный фон
 modal.addEventListener('click', (e) => {
   if (e.target === modal) closeModal();
 });
 
-// Показать инструкцию при первом посещении (с небольшой задержкой, чтобы модель успела загрузиться)
 if (!localStorage.getItem('configurator_help_seen')) {
   setTimeout(openModal, 1500);
 }
