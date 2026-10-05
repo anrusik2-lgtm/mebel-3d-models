@@ -54,7 +54,6 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 .checkbox-container input[type="checkbox"]{width:20px;height:20px;cursor:pointer;flex-shrink:0;accent-color:#0044cc;}
 .checkbox-container label{cursor:pointer;font-size:13px;font-weight:bold;color:#333;line-height:1.3;}
 
-/* Новый стиль для галочки антресоли */
 .checkbox-container.top-mode {
   background: #e3f2fd;
   border-color: #0044cc;
@@ -73,7 +72,6 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 .spinner{width:50px;height:50px;border:5px solid #f3f3f3;border-top:5px solid #0044cc;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 15px}
 @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 
-/* === СЦЕНА СПИСОК === */
 #scene-list-container {
   padding: 15px; border-top: 2px solid #ddd; background: #f8f9fa; 
   max-height: 35vh; overflow-y: auto; flex-shrink: 0;
@@ -96,7 +94,6 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 }
 #clear-scene-btn:hover { background: #f0d59a; }
 
-/* === СТИЛИ ДЛЯ МОДАЛЬНОГО ОКНА ИНСТРУКЦИИ === */
 .modal-backdrop {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
@@ -205,7 +202,6 @@ kbd {
 
 <div id="loading"><div class="spinner"></div><div id="loading-text">Загрузка...</div></div>
 
-<!-- === МОДАЛЬНОЕ ОКНО ИНСТРУКЦИИ === -->
 <div id="instruction-modal" class="modal-backdrop">
   <div class="modal-content">
     <button class="modal-close" id="close-modal">&times;</button>
@@ -397,7 +393,6 @@ function processAndAddModel(gltf, modelName, isAppend){
   const addOnTop = document.getElementById('add-on-top').checked;
 
   if (addOnTop && selectedObjects.length > 0) {
-    // Режим антресоли: ставим сверху на ВЫДЕЛЕННЮ деталь
     const targetObj = selectedObjects[0];
     const targetBox = new THREE.Box3().setFromObject(targetObj);
     const newBox = new THREE.Box3().setFromObject(group);
@@ -409,7 +404,6 @@ function processAndAddModel(gltf, modelName, isAppend){
     offsetZ = targetCenter.z - newCenter.z;
 
   } else if (addOnTop && sceneModels.length > 0) {
-    // Режим антресоли, но ничего не выделено: ставим сверху на ВСЮ сцену
     const sceneBox = new THREE.Box3();
     sceneModels.forEach(sm => sceneBox.union(new THREE.Box3().setFromObject(sm.group)));
     const newBox = new THREE.Box3().setFromObject(group);
@@ -419,14 +413,20 @@ function processAndAddModel(gltf, modelName, isAppend){
     offsetY = sceneBox.max.y - newBox.min.y;
     offsetX = sceneCenter.x - newCenter.x;
     offsetZ = sceneCenter.z - newCenter.z;
-  } else {
-    // Стандартный режим: ставим справа
+    
+  } else if (sceneModels.length > 0) {
+    // ИСПРАВЛЕНИЕ: ставим справа только если уже есть модели
     let maxX = -Infinity;
     sceneModels.forEach(sm => {
       const box = new THREE.Box3().setFromObject(sm.group);
       if (box.max.x > maxX) maxX = box.max.x;
     });
     offsetX = maxX + 50;
+  } else {
+    // ИСПРАВЛЕНИЕ: если сцена пуста, ставим первую модель в центр (0,0,0)
+    offsetX = 0;
+    offsetY = 0;
+    offsetZ = 0;
   }
 
   group.position.set(offsetX, offsetY, offsetZ);
