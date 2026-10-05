@@ -43,12 +43,11 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#f0f0f0}
 @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 </style>
 
-<!-- ⚠️ IMPORTMAP ДОЛЖЕН БЫТЬ ДО ЛЮБОГО type="module" -->
 <script type="importmap">
 {
   "imports": {
-    "three": "https://esm.sh/three@0.160.0",
-    "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/"
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
   }
 }
 </script>
@@ -97,8 +96,6 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 
-/* === ПУТИ ===
-   models.json и .glb лежат рядом с index.html в корне репозитория. */
 const MODELS_URL = 'models.json';
 const RAW_BASE = './';
 
@@ -137,6 +134,9 @@ function initScene(){
 
   animate();
 }
+
+/* ✅ ИСПРАВЛЕНО: инициализация сцены до всех addEventListener */
+initScene();
 
 async function loadModelsList(){
   try{
@@ -412,7 +412,7 @@ window.addEventListener('resize', () => {
   renderer.setSize(v.clientWidth, v.clientHeight);
 });
 
-initScene();
+/* === СТАРТ === */
 loadModelsList();
 </script>
 </body>
