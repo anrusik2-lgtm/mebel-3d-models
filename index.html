@@ -22,20 +22,20 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 #main-area{position:absolute;left:320px;right:300px;top:0;bottom:0;background:#ffffff}
 #viewport{width:100%;height:100%}
 #settings-panel{position:absolute;right:0;top:0;width:300px;height:100vh;background:white;box-shadow:-2px 0 10px rgba(0,0,0,0.1);display:flex;flex-direction:column;z-index:100}
-.tabs{display:flex;border-bottom:2px solid #ddd}
-.tab{flex:1;padding:15px;text-align:center;cursor:pointer;font-weight:bold;color:#666}
-.tab.active{color:#0044cc;border-bottom:3px solid #0044cc}
+.tabs{display:flex;border-bottom:2px solid #ddd;flex-wrap:wrap}
+.tab{flex:1 1 33%;padding:10px 5px;text-align:center;cursor:pointer;font-weight:bold;color:#666;font-size:11px;line-height:1.2;border-bottom:3px solid transparent}
+.tab.active{color:#0044cc;border-bottom-color:#0044cc}
 .tab-content{display:none;flex:1;overflow-y:auto;padding:15px}
 .tab-content.active{display:block}
+.category-title{font-weight:bold;margin:15px 0 10px 0;color:#333;border-bottom:2px solid #ddd;padding-bottom:5px;font-size:12px;letter-spacing:0.5px}
+.category-title:first-child{margin-top:0}
+.texture-item{display:flex;align-items:center;margin-bottom:8px;padding:6px;border:1px solid #eee;border-radius:6px;cursor:pointer;transition:background 0.15s}
+.texture-item:hover{background:#f0f8ff;border-color:#0044cc}
+.texture-item img{width:50px;height:50px;object-fit:cover;border-radius:4px;margin-right:10px;border:1px solid #ccc;flex-shrink:0}
+.texture-name{font-size:12px;font-weight:bold}
 .color-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .color-btn{width:100%;aspect-ratio:1;border:3px solid #fff;border-radius:8px;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,0.2)}
 .color-btn:hover{transform:scale(1.1)}
-.category-title{font-weight:bold;margin:20px 0 10px 0;color:#333;border-bottom:2px solid #ddd;padding-bottom:5px;font-size:13px;letter-spacing:0.5px}
-.category-title:first-child{margin-top:0}
-.texture-item{display:flex;align-items:center;margin-bottom:10px;padding:8px;border:1px solid #eee;border-radius:6px;cursor:pointer;transition:background 0.15s}
-.texture-item:hover{background:#f0f8ff;border-color:#0044cc}
-.texture-item img{width:60px;height:60px;object-fit:cover;border-radius:4px;margin-right:12px;border:1px solid #ccc;flex-shrink:0}
-.texture-name{font-size:13px;font-weight:bold}
 #reset-btn{margin:15px;padding:12px;background:#f5deb3;border:2px solid #d4a76a;border-radius:8px;cursor:pointer;font-weight:bold;font-size:14px}
 #reset-btn:hover{background:#f0d59a}
 #screenshot-btn{margin:0 15px 15px 15px;padding:12px;background:#e3f2fd;border:2px solid #0044cc;color:#0044cc;border-radius:8px;cursor:pointer;font-weight:bold;font-size:14px}
@@ -72,22 +72,13 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 
 <div id="settings-panel">
   <div class="tabs">
-    <div class="tab active" id="tab-colors">Цвета</div>
-    <div class="tab" id="tab-textures">Текстуры</div>
+    <div class="tab active" id="tab-standard">Стандартные цвета ЛДСП</div>
+    <div class="tab" id="tab-fantasy">Фантазийные цвета ЛДСП</div>
+    <div class="tab" id="tab-paint">Цвет покраски фанеры</div>
   </div>
-  <div id="colors" class="tab-content active">
-    <div class="color-grid">
-      <button class="color-btn" style="background:#cc0000" data-type="color" data-value="#cc0000"></button>
-      <button class="color-btn" style="background:#00aa00" data-type="color" data-value="#00aa00"></button>
-      <button class="color-btn" style="background:#0044cc" data-type="color" data-value="#0044cc"></button>
-      <button class="color-btn" style="background:#eeeeee" data-type="color" data-value="#eeeeee"></button>
-      <button class="color-btn" style="background:#111111" data-type="color" data-value="#111111"></button>
-      <button class="color-btn" style="background:#ffcc00" data-type="color" data-value="#ffcc00"></button>
-      <button class="color-btn" style="background:#8b4513" data-type="color" data-value="#8b4513"></button>
-      <button class="color-btn" style="background:#f5deb3" data-type="color" data-value="#f5deb3"></button>
-    </div>
-  </div>
-  <div id="textures" class="tab-content"><div id="texture-list"></div></div>
+  <div id="standard" class="tab-content active"><div id="standard-list"></div></div>
+  <div id="fantasy" class="tab-content"><div id="fantasy-list"></div></div>
+  <div id="paint" class="tab-content"><div id="paint-list"></div></div>
   <button id="reset-btn">Вернуть материал</button>
   <button id="screenshot-btn">Скачать изображение</button>
 </div>
@@ -102,49 +93,74 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const MODELS_URL = 'models.json';
 const RAW_BASE = './';
 
-/* === СПИСОК ТЕКСТУР === */
-const texturesData = [
-  // 🎨 Фантазийные
-  {category:'fantasy', name:'Лимонный сорбет',   image:'textures/limonnyy_sorbet_7123_ultradecor.jpg'},
-  {category:'fantasy', name:'Песочный',          image:'textures/pesochnyy_0515_ultradecor.jpg'},
-  {category:'fantasy', name:'Оранжевый цитрус',  image:'textures/oranzhevyy_tsitrusovyy_m702_extravert.jpg'},
-  {category:'fantasy', name:'Розовый маревый',   image:'textures/rozovyy_marevyy_m.705_extravert.jpg'},
-  {category:'fantasy', name:'Салатовый',              image:'textures/salatovyy.jpg'},
-  {category:'fantasy', name:'Солнечный свет',    image:'textures/solnechnyy_svet_0134_ultradecor.jpg'},
-  {category:'fantasy', name:'Лимонный',               image:'textures/limonnyy_nordeco.jpg'},
-  {category:'fantasy', name:'Зелёный лайм',      image:'textures/zelenyy_laym_5519_ultradecor.jpg'},
-  {category:'fantasy', name:'Зелёный ивовый',    image:'textures/zelyonyy_ivovyy_m607_extravert.jpg'},
-  {category:'fantasy', name:'Зелёный мятный',    image:'textures/zelyonyy_myatnyy_m605_extravert.jpg'},
-  {category:'fantasy', name:'Зелёный оксид',     image:'textures/zelyonyy_oksid_6561_ultradecor.jpg'},
-  {category:'fantasy', name:'Красный',           image:'textures/krasnyy_0149_ultradecor.jpg'},
-  {category:'fantasy', name:'Королевский синий', image:'textures/korolevskiy_siniy_0125_ultradecor.jpg'},
-  {category:'fantasy', name:'Лазурный голубой',  image:'textures/lazurnyy_goluboy_k517_ultradecor.jpg'},
-  {category:'fantasy', name:'Капри синий',       image:'textures/kapri_siniy_0121_ultradecor.jpg'},
-  {category:'fantasy', name:'Лаванда',          image:'textures/lavanda_u7501_uvadrev_.jpg'},
-  {category:'fantasy', name:'Аура',                   image:'textures/aura_lamarty.jpg'},
-  {category:'fantasy', name:'Ирис',                   image:'textures/iris_lamarty.jpg'},
+/* === СТАНДАРТНЫЕ ЦВЕТА ЛДСП === */
+const standardTextures = [
+  {name:'Алюминий 0193 невский',     image:'textures/alyuminiy_0193_nevskiy_laminat.jpg'},
+  {name:'Аура ламарти',              image:'textures/aura_lamarty.jpg'},
+  {name:'Белый 6459',                image:'textures/belyy_6459_ultradecor.jpg'},
+  {name:'Берёза 1715',               image:'textures/bereza_1715_ultradecor.jpg'},
+  {name:'Бежевый инаной M328',       image:'textures/bezhevyy_inanoy_m328_ultradecor.jpg'},
+  {name:'Бук Бавария 0381',          image:'textures/buk_bavariya_0381_ultradecor.jpg'},
+  {name:'Бук Бавария светлый',       image:'textures/buk_bavariya_svetlyy_nordeco_.jpg'},
+  {name:'Чёрный U2200M',             image:'textures/chernyy_u2200m_extravert.jpg'},
+  {name:'Дуб Атланта',               image:'textures/dub_atlanta_nordeco.jpg'},
+  {name:'Дуб Феррара 8921',          image:'textures/dub_ferrara_8921_ultradecor.jpg'},
+  {name:'Дуб коломенский молочный',  image:'textures/dub_kolomenskiy_molochnyy_d.341_extravert_.jpg'},
+  {name:'Дуб млечный',               image:'textures/dub_mlechnyy_nordeco.jpg'},
+  {name:'Дуб молочный 8622',         image:'textures/dub_molochnyy_8622.jpg'},
+  {name:'Дуб Шамони светлый 004',    image:'textures/dub_shamoni_svetlyy_004_ultradecor.jpg'},
+  {name:'Дуб Сонома 3025',           image:'textures/dub_sonoma_3025_ultradecor.jpg'},
+  {name:'Ирис ламарти',              image:'textures/iris_lamarty.jpg'},
+  {name:'Клён 0375',                 image:'textures/klen_0375_ultradecor.jpg'},
+  {name:'Клён Танзай невский',       image:'textures/klen_tanzay_nevskiy_laminat.jpg'},
+  {name:'Ольха классическая',        image:'textures/olkha_klassicheskaya.jpg'},
+  {name:'Орех Экко 9459',            image:'textures/orekh_ekko_9459_ultradecor.jpg'},
+  {name:'Орех Гварнери 9455',        image:'textures/orekh_gvarneri_9455_ultradecor.jpg'},
+  {name:'Орех Мария-Луиза 9490',     image:'textures/orekh_mariya_luiza_%28italyanskiy%29_9490_ultradecor.jpg'},
+  {name:'Титан 0282 невский',        image:'textures/titan_0282_nevskiy_laminat_.jpg'},
+  {name:'Венге Тсаво 3354',          image:'textures/venge_tsavo_3354_ultradecor.jpg'},
+  {name:'Вишня Оксфорд',             image:'textures/vishnya_oksford.jpg'},
+  {name:'Ясень Шимо светлый 3356',   image:'textures/yasen_shimo_svetlyy_3356_ultradecor.jpg'},
+  {name:'Ясень Шимо тёмный 3357',    image:'textures/yasen_shimo_temnyy_3357_ultradecor.jpg'}
+];
 
-  // 🪵 Стандартные
-  {category:'standard', name:'Белый',                image:'textures/belyy_6459_ultradecor.jpg'},
-  {category:'standard', name:'Берёза',               image:'textures/bereza_1715_ultradecor.jpg'},
-  {category:'standard', name:'Бук Бавария светлый',       image:'textures/buk_bavariya_svetlyy_nordeco_.jpg'},
-  {category:'standard', name:'Чёрный',             image:'textures/chernyy_u2200m_extravert.jpg'},
-  {category:'standard', name:'Дуб Атланта',               image:'textures/dub_atlanta_nordeco.jpg'},
-  {category:'standard', name:'Дуб Феррара',          image:'textures/dub_ferrara_8921_ultradecor.jpg'},
-  {category:'standard', name:'Дуб коломенский молочный',  image:'textures/dub_kolomenskiy_molochnyy_d.341_extravert_.jpg'},
-  {category:'standard', name:'Дуб млечный',               image:'textures/dub_mlechnyy_nordeco.jpg'},
-  {category:'standard', name:'Дуб Шамони светлый',    image:'textures/dub_shamoni_svetlyy_004_ultradecor.jpg'},
-  {category:'standard', name:'Дуб Сонома',           image:'textures/dub_sonoma_3025_ultradecor.jpg'},
-  {category:'standard', name:'Клён',                 image:'textures/klen_0375_ultradecor.jpg'},
-  {category:'standard', name:'Ольха классическая',        image:'textures/olkha_klassicheskaya.jpg'},
-  {category:'standard', name:'Бежевый льняной',       image:'textures/bezhevyy_lnyanoy_m.328_ultradecor.jpg'},
-  {category:'standard', name:'Орех Экко',            image:'textures/orekh_ekko_9459_ultradecor.jpg'},
-  {category:'standard', name:'Орех Гварнери',        image:'textures/orekh_gvarneri_9455_ultradecor.jpg'},
-  {category:'standard', name:'Орех Мария-Луиза',     image:'textures/orekh_mariya_luiza_(italyanskiy)_9490_ultradecor.jpg'},
-  {category:'standard', name:'Венге Цаво',          image:'textures/venge_tsavo_3354_ultradecor.jpg'},
-  {category:'standard', name:'Вишня Оксфорд',             image:'textures/vishnya_oksford.jpg'},
-  {category:'standard', name:'Ясень Шимо светлый',   image:'textures/yasen_shimo_svetlyy_3356_ultradecor.jpg'},
-  {category:'standard', name:'Ясень Шимо тёмный',    image:'textures/yasen_shimo_temnyy_3357_ultradecor.jpg'}
+/* === ФАНТАЗИЙНЫЕ ЦВЕТА ЛДСП === */
+const fantasyTextures = [
+  {name:'Лимонный сорбет 7123',      image:'textures/limonnyy_sorbet_7123_ultradecor.jpg'},
+  {name:'Песочный 0515',             image:'textures/pesochnyy_0515_ultradecor.jpg'},
+  {name:'Оранжевый 0132',            image:'textures/oranzhevyy_0132_ultradecor.jpg'},
+  {name:'Оранжевый цитрус M702',     image:'textures/oranzhevyy_tsitrusovyy_m702_extravert.jpg'},
+  {name:'Розовый маревый M705',      image:'textures/rozovyy_marevyy_m705_extravert.jpg'},
+  {name:'Салатовый',                 image:'textures/salatovyy.jpg'},
+  {name:'Солнечный свет 0134',       image:'textures/solnechnyy_svet_0134_ultradecor.jpg'},
+  {name:'Лимонный нордеко',          image:'textures/limonnyy_nordeco.jpg'},
+  {name:'Зелёный лайм 5519',         image:'textures/zelenyy_laym_5519_ultradecor.jpg'},
+  {name:'Зелёный ивовый M607',       image:'textures/zelenyy_ivovyy_m607_extravert.jpg'},
+  {name:'Зелёный мятный M605',       image:'textures/zelenyy_myatnyy_m605_extravert.jpg'},
+  {name:'Зелёный оксид 6561',        image:'textures/zelenyy_oksid_6561_ultradecor.jpg'},
+  {name:'Красный 0149',              image:'textures/krasnyy_0149_ultradecor.jpg'},
+  {name:'Королевский синий 0125',    image:'textures/korolevskiy_siniy_0125_ultradecor.jpg'},
+  {name:'Лазурный голубой K517',     image:'textures/lazurnyy_goluboy_k517_ultradecor.jpg'},
+  {name:'Капри синий 0121',          image:'textures/kapri_siniy_0121_ultradecor.jpg'},
+  {name:'Лаванда U7501',             image:'textures/lavanda_u7501_uvadrev_.jpg'}
+];
+
+/* === ЦВЕТ ПОКРАСКИ ФАНЕРЫ (коды из вашего списка) === */
+const paintTextures = [
+  {name:'Серый',             image:'textures/S168.jpg'},
+  {name:'Бежевый',           image:'textures/G100.jpg'},
+  {name:'Сиреневый',         image:'textures/H148.jpg'},
+  {name:'Фиолетовый',        image:'textures/K148.jpg'},
+  {name:'Небесно-голубой',   image:'textures/V021.jpg'},
+  {name:'Салатовый',         image:'textures/H050.jpg'},
+  {name:'Лимонный',          image:'textures/G081.jpg'},
+  {name:'Желтый',            image:'textures/L077.jpg'},
+  {name:'Оранжевый',         image:'textures/L089.jpg'},
+  {name:'Розовый',           image:'textures/H141.jpg'},
+  {name:'Зеленый',           image:'textures/L052.jpg'},
+  {name:'Красный',           image:'textures/L134.jpg'},
+  {name:'Синий',             image:'textures/Y077.jpg'},
+  {name:'Голубой',           image:'textures/K016.jpg'}
 ];
 
 let scene, camera, renderer, controls, currentModel, selectedObject;
@@ -155,7 +171,7 @@ let modelsData = [], EDGE_THRESHOLD = 0.005, NEIGHBOR_TOLERANCE = 0.00005;
 function initScene(){
   const viewport = document.getElementById('viewport');
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xffffff);  /* белый фон */
+  scene.background = new THREE.Color(0xffffff);
 
   camera = new THREE.PerspectiveCamera(45, viewport.clientWidth / viewport.clientHeight, 0.01, 100000);
 
@@ -173,7 +189,6 @@ function initScene(){
   scene.add(dirLight);
   scene.add(new THREE.HemisphereLight(0xffffff, 0xffffff, 0.6));
 
-  /* Сетка — очень светлая, чтобы не бросалась в глаза на белом фоне */
   const grid = new THREE.GridHelper(100, 100, 0xdddddd, 0xeeeeee);
   scene.add(grid);
 
@@ -320,33 +335,25 @@ function findAdjacentEdges(object){
 /* === МАТЕРИАЛЫ === */
 const textureLoader = new THREE.TextureLoader();
 
-function applyMaterial(type, value){
+function applyMaterial(value){
   if(!selectedObject){ alert('Сначала кликните по детали в 3D-сцене'); return; }
   const group = [selectedObject, ...findAdjacentEdges(selectedObject)];
 
-  if(type === 'color'){
-    const color = new THREE.Color(value);
+  textureLoader.load(value, (tex) => {
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     group.forEach(obj => {
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-      mats.forEach(m => { m.color.set(color); m.map = null; m.needsUpdate = true; });
-    });
-  }else if(type === 'texture'){
-    textureLoader.load(value, (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      group.forEach(obj => {
-        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-        mats.forEach(m => {
-          m.map = tex;
-          m.color.setHex(0xffffff);
-          m.needsUpdate = true;
-        });
+      mats.forEach(m => {
+        m.map = tex;
+        m.color.setHex(0xffffff);
+        m.needsUpdate = true;
       });
-    }, undefined, (err) => {
-      console.error('Не удалось загрузить текстуру:', value, err);
-      alert(`Не удалось загрузить текстуру:\n${value}`);
     });
-  }
+  }, undefined, (err) => {
+    console.error('Не удалось загрузить текстуру:', value, err);
+    alert(`Не удалось загрузить текстуру:\n${value}`);
+  });
 }
 
 /* === СБРОС ВСЕЙ МОДЕЛИ === */
@@ -396,17 +403,11 @@ renderer.domElement.addEventListener('click', (event) => {
 });
 
 /* === КНОПКИ === */
-document.querySelectorAll('.color-btn').forEach(btn => {
-  btn.addEventListener('click', () => applyMaterial(btn.dataset.type, btn.dataset.value));
-});
 document.getElementById('reset-btn').addEventListener('click', resetModel);
 
-/* === СОХРАНЕНИЕ КАРТИНКИ === */
 document.getElementById('screenshot-btn').addEventListener('click', () => {
-  /* Рендерим ещё раз, чтобы гарантированно получить актуальный кадр */
   renderer.render(scene, camera);
   const dataUrl = renderer.domElement.toDataURL('image/png');
-
   const a = document.createElement('a');
   a.href = dataUrl;
   a.download = 'model-' + Date.now() + '.png';
@@ -415,30 +416,22 @@ document.getElementById('screenshot-btn').addEventListener('click', () => {
   document.body.removeChild(a);
 });
 
-/* === СПИСОК ТЕКСТУР === */
-const textureListEl = document.getElementById('texture-list');
-const categories = {
-  fantasy:  'Фантазийные',
-  standard: 'Стандартные'
-};
-
-for(const [catKey, catTitle] of Object.entries(categories)){
-  const items = texturesData.filter(t => t.category === catKey);
-  if(items.length === 0) continue;
-
-  const header = document.createElement('div');
-  header.className = 'category-title';
-  header.innerText = catTitle;
-  textureListEl.appendChild(header);
-
+/* === ОТРИСОВКА СПИСКОВ ТЕКСТУР === */
+function renderTextureList(containerId, items){
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
   items.forEach(tex => {
     const div = document.createElement('div');
     div.className = 'texture-item';
     div.innerHTML = `<img src="${tex.image}" loading="lazy" alt="${tex.name}"><div class="texture-name">${tex.name}</div>`;
-    div.addEventListener('click', () => applyMaterial('texture', tex.image));
-    textureListEl.appendChild(div);
+    div.addEventListener('click', () => applyMaterial(tex.image));
+    container.appendChild(div);
   });
 }
+
+renderTextureList('standard-list', standardTextures);
+renderTextureList('fantasy-list', fantasyTextures);
+renderTextureList('paint-list', paintTextures);
 
 /* === ЗАГРУЗКА === */
 function showLoading(text){
@@ -450,19 +443,15 @@ function hideLoading(){
 }
 
 /* === ТАБЫ === */
-document.getElementById('tab-colors').addEventListener('click', function(){
+function switchTab(activeId, contentId){
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-  this.classList.add('active');
-  document.getElementById('colors').classList.add('active');
-});
-
-document.getElementById('tab-textures').addEventListener('click', function(){
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-  this.classList.add('active');
-  document.getElementById('textures').classList.add('active');
-});
+  document.getElementById(activeId).classList.add('active');
+  document.getElementById(contentId).classList.add('active');
+}
+document.getElementById('tab-standard').addEventListener('click', () => switchTab('tab-standard', 'standard'));
+document.getElementById('tab-fantasy').addEventListener('click', () => switchTab('tab-fantasy', 'fantasy'));
+document.getElementById('tab-paint').addEventListener('click', () => switchTab('tab-paint', 'paint'));
 
 /* === АНИМАЦИЯ === */
 function animate(){
