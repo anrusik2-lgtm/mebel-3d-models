@@ -56,9 +56,12 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 #screenshot-btn{margin:0 10px 10px 10px;padding:10px;background:#e3f2fd;border:2px solid #0044cc;color:#0044cc;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px}
 #screenshot-btn:hover{background:#c8e3fc}
 
-#ruler-btn{margin:0 10px 10px 10px;padding:10px;background:#f0f0f0;border:2px solid #999;color:#333;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px;transition:0.2s}
+.ruler-controls{display:flex;gap:5px;margin:0 10px 10px 10px}
+#ruler-btn{flex:1;padding:10px;background:#f0f0f0;border:2px solid #999;color:#333;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px;transition:0.2s}
 #ruler-btn:hover{background:#e0e0e0}
 #ruler-btn.active{background:#0044cc;color:white;border-color:#003399}
+#ruler-settings-btn{width:36px;height:36px;background:#f0f0f0;border:2px solid #999;border-radius:6px;cursor:pointer;font-size:18px;transition:0.2s;display:flex;align-items:center;justify-content:center}
+#ruler-settings-btn:hover{background:#e0e0e0}
 
 #loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);color:white;padding:25px;border-radius:10px;z-index:200;display:none;text-align:center}
 #loading.show{display:block}
@@ -126,6 +129,16 @@ kbd {
 }
 .modal-ok-btn:hover { background: #003399; }
 
+/* Стили для настроек линейки */
+.settings-group { margin-bottom: 20px; }
+.settings-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; font-size: 14px; }
+.settings-group input[type="range"] { width: 100%; height: 6px; border-radius: 3px; background: #ddd; outline: none; }
+.settings-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 18px; height: 18px;
+  border-radius: 50%; background: #0044cc; cursor: pointer;
+}
+.settings-value { display: inline-block; margin-left: 10px; color: #0044cc; font-weight: bold; }
+
 @media (max-width: 600px) {
   .modal-content { padding: 18px; width: 95%; }
   .instruction-list li { font-size: 12px; margin-bottom: 10px; }
@@ -185,7 +198,10 @@ kbd {
   </div>
   
   <button id="reset-btn">Вернуть материал</button>
-  <button id="ruler-btn"> Линейка (выкл)</button>
+  <div class="ruler-controls">
+    <button id="ruler-btn">📏 Линейка (выкл)</button>
+    <button id="ruler-settings-btn" title="Настройки линейки">⚙️</button>
+  </div>
   <button id="screenshot-btn">Скачать изображение</button>
 </div>
 
@@ -196,16 +212,29 @@ kbd {
     <button class="modal-close" id="close-modal">&times;</button>
     <h2>📖 Как пользоваться конфигуратором</h2>
     <ul class="instruction-list">
-      <li><strong>1.</strong> Нажмите <strong>➕</strong> чтобы добавить модель справа, или <strong>️</strong> чтобы поставить сверху (антресоль).</li>
+      <li><strong>1.</strong> Нажмите <strong>➕</strong> чтобы добавить модель справа, или <strong>⬆️</strong> чтобы поставить сверху (антресоль).</li>
       <li><strong>2.</strong> <strong>Вращайте</strong> сцену левой кнопкой мыши. <strong>Приближайте</strong> колесиком.</li>
       <li><strong>3.</strong> <strong>Кликните</strong> по детали для выделения, затем выберите цвет справа.</li>
       <li><strong>4.</strong> Зажмите <kbd>Ctrl</kbd> для выделения нескольких деталей.</li>
-      <li><strong>5.</strong> <strong>Линейка</strong>: включите режим, кликните на первую точку, тяните мышь (курсор прилипает к вершинам), кликните вторую точку.</li>
+      <li><strong>5.</strong> <strong>Линейка</strong>: включите режим, кликните на первую точку, затем на вторую, двигайте мышь для позиционирования выноски, кликните для фиксации.</li>
     </ul>
     <div class="modal-note">
       💡 <em>Технические детали (задняя стенка, кромки, фурнитура) защищены от изменения цвета.</em>
     </div>
     <button class="modal-ok-btn" id="modal-ok">Всё понятно!</button>
+  </div>
+</div>
+
+<!-- Модальное окно настроек линейки -->
+<div id="ruler-settings-modal" class="modal-backdrop">
+  <div class="modal-content">
+    <button class="modal-close" id="close-ruler-settings">&times;</button>
+    <h2>⚙️ Настройки линейки</h2>
+    <div class="settings-group">
+      <label>Размер текста: <span class="settings-value" id="font-size-value">36</span>px</label>
+      <input type="range" id="font-size-slider" min="16" max="72" value="36">
+    </div>
+    <button class="modal-ok-btn" id="apply-ruler-settings">Применить</button>
   </div>
 </div>
 
@@ -285,14 +314,26 @@ let selectedObjects = [];
 
 let sceneModels = []; 
 let nextModelId = 1;
+let regularModelsCount = 0;
+let topModelsCount = 0;
 
 // Переменные для линейки
 let rulerMode = false;
-let rulerStartPoint = null;
+let rulerState = 'waiting_first'; // 'waiting_first', 'waiting_second', 'waiting_offset', 'done'
+let rulerFirstPoint = null;
+let rulerSecondPoint = null;
+let rulerOffsetDistance = 0;
 let rulerGroup = null;
 let snapMarker = null;
-let allRulerGroups = []; // Храним все созданные линейки
+let allRulerGroups = [];
 const SNAP_DISTANCE = 15;
+
+// Настройки линейки
+let rulerSettings = {
+  fontSize: 36,
+  labelWidth: 300,
+  labelHeight: 80
+};
 
 function initScene(){
   const viewport = document.getElementById('viewport');
@@ -383,6 +424,16 @@ document.getElementById('search-input').addEventListener('input', (e) => {
 });
 
 function processAndAddModel(gltf, modelName, addOnTop){
+  // Проверка ограничений
+  if (!addOnTop && regularModelsCount >= 2) {
+    alert('Можно добавить максимум 2 обычных изделия. Антресоли можно добавлять без ограничений.');
+    return;
+  }
+  if (addOnTop && topModelsCount >= 2) {
+    alert('Можно добавить максимум 2 антресоли.');
+    return;
+  }
+
   const group = gltf.scene;
   
   // Сначала добавляем модель в сцену с позицией (0,0,0) для корректного вычисления bounding box
@@ -402,6 +453,7 @@ function processAndAddModel(gltf, modelName, addOnTop){
     offsetY = targetBox.max.y - newBox.min.y;
     offsetX = targetCenter.x - newCenter.x;
     offsetZ = targetCenter.z - newCenter.z;
+    topModelsCount++;
 
   } else if (addOnTop && sceneModels.length > 0) {
     const sceneBox = new THREE.Box3();
@@ -413,29 +465,31 @@ function processAndAddModel(gltf, modelName, addOnTop){
     offsetY = sceneBox.max.y - newBox.min.y;
     offsetX = sceneCenter.x - newCenter.x;
     offsetZ = sceneCenter.z - newCenter.z;
+    topModelsCount++;
     
   } else if (sceneModels.length > 0) {
-    // Вычисляем правую границу всех существующих моделей
-    sceneModels.forEach(sm => sm.group.updateMatrixWorld(true));
-    
-    let maxX = -Infinity;
+    // Вычисляем bounding box всех обычных моделей
+    const allModelsBox = new THREE.Box3();
     sceneModels.forEach(sm => {
-      const box = new THREE.Box3().setFromObject(sm.group);
-      if (box.max.x > maxX) maxX = box.max.x;
+      if (!sm.isTop) {
+        allModelsBox.union(new THREE.Box3().setFromObject(sm.group));
+      }
     });
     
-    // Вычисляем ширину новой модели
+    const maxX = allModelsBox.max.x;
     const newBox = new THREE.Box3().setFromObject(group);
     const newWidth = newBox.max.x - newBox.min.x;
     
-    // Отступ = половина ширины новой модели + 50 единиц
-    offsetX = maxX + (newWidth / 2) + 50;
+    // Большой отступ для гарантированного разделения
+    offsetX = maxX + newWidth + 150;
     
     console.log('Добавление модели. maxX:', maxX, 'ширина новой:', newWidth, 'позиция X:', offsetX);
+    regularModelsCount++;
   } else {
     offsetX = 0;
     offsetY = 0;
     offsetZ = 0;
+    regularModelsCount++;
   }
 
   // Устанавливаем финальную позицию
@@ -446,7 +500,8 @@ function processAndAddModel(gltf, modelName, addOnTop){
     id: nextModelId++,
     name: modelName,
     group: group,
-    meshes: []
+    meshes: [],
+    isTop: addOnTop
   };
   
   group.traverse((child) => {
@@ -491,6 +546,8 @@ async function loadModel(model, element){
   allMeshes = [];
   originalMaterials.clear();
   selectedObjects = [];
+  regularModelsCount = 0;
+  topModelsCount = 0;
 
   const modelUrl = /^https?:\/\//i.test(model.file) ? model.file : RAW_BASE + model.file;
   const loader = new GLTFLoader();
@@ -535,6 +592,12 @@ function removeModelFromScene(id){
   allMeshes = allMeshes.filter(m => !model.meshes.includes(m));
   selectedObjects = selectedObjects.filter(m => !model.meshes.includes(m));
   model.meshes.forEach(m => originalMaterials.delete(m.uuid));
+  
+  if (model.isTop) {
+    topModelsCount--;
+  } else {
+    regularModelsCount--;
+  }
   
   sceneModels.splice(index, 1);
   updateSceneListUI();
@@ -589,7 +652,7 @@ function updateSceneListUI(){
     nameSpan.style.textOverflow = 'ellipsis';
     nameSpan.style.whiteSpace = 'nowrap';
     nameSpan.title = model.name;
-    nameSpan.textContent = model.name;
+    nameSpan.textContent = model.name + (model.isTop ? ' (антресоль)' : '');
     
     const removeBtn = document.createElement('button');
     removeBtn.textContent = '✕';
@@ -691,27 +754,27 @@ function resetModel(){
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-// Создание текстовой метки (увеличенный размер)
+// Создание текстовой метки с настраиваемым размером
 function createTextSprite(text, position) {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
-  canvas.width = 300;
-  canvas.height = 80;
+  canvas.width = rulerSettings.labelWidth;
+  canvas.height = rulerSettings.labelHeight;
   
   context.fillStyle = 'rgba(0, 68, 204, 0.95)';
-  context.fillRect(0, 0, 300, 80);
+  context.fillRect(0, 0, canvas.width, canvas.height);
   
   context.fillStyle = 'white';
-  context.font = 'bold 36px Arial';
+  context.font = `bold ${rulerSettings.fontSize}px Arial`;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
-  context.fillText(text, 150, 40);
+  context.fillText(text, canvas.width / 2, canvas.height / 2);
   
   const texture = new THREE.CanvasTexture(canvas);
   const material = new THREE.SpriteMaterial({ map: texture, depthTest: false });
   const sprite = new THREE.Sprite(material);
   sprite.position.copy(position);
-  sprite.scale.set(80, 21, 1);
+  sprite.scale.set(rulerSettings.labelWidth * 0.25, rulerSettings.labelHeight * 0.25, 1);
   sprite.renderOrder = 999;
   
   return sprite;
@@ -752,19 +815,22 @@ function snapToVertex(point) {
   return closestVertex;
 }
 
-// Создание линейки с выноской
-function createRulerWithExtension(startPoint, endPoint) {
+// Создание линейки с выноской (перпендикулярно к размерной линии)
+function createRulerWithExtension(startPoint, endPoint, offsetDistance) {
   const group = new THREE.Group();
   
-  // Вычисляем направление от камеры к середине линии для выноски
+  // Направление размерной линии
+  const dir = new THREE.Vector3().subVectors(endPoint, startPoint).normalize();
+  
+  // Перпендикулярное направление в плоскости камеры
   const midPoint = new THREE.Vector3().addVectors(startPoint, endPoint).multiplyScalar(0.5);
-  const cameraDirection = new THREE.Vector3().subVectors(camera.position, midPoint).normalize();
+  const cameraDir = new THREE.Vector3().subVectors(camera.position, midPoint).normalize();
+  const perpDir = new THREE.Vector3().crossVectors(dir, cameraDir).normalize();
   
-  // Смещение выноски от поверхности (в сторону камеры)
-  const offsetDistance = 40;
-  const offsetVector = cameraDirection.multiplyScalar(offsetDistance);
+  // Смещение выноски
+  const offsetVector = perpDir.multiplyScalar(offsetDistance);
   
-  // Точки выноски (смещённые от поверхности)
+  // Точки выноски
   const startOffset = new THREE.Vector3().addVectors(startPoint, offsetVector);
   const endOffset = new THREE.Vector3().addVectors(endPoint, offsetVector);
   
@@ -808,6 +874,19 @@ function createRulerWithExtension(startPoint, endPoint) {
   return group;
 }
 
+// Обновление всех существующих линеек с новыми настройками
+function updateAllRulers() {
+  allRulerGroups.forEach(rulerData => {
+    scene.remove(rulerData.group);
+    rulerData.group = createRulerWithExtension(
+      rulerData.startPoint,
+      rulerData.endPoint,
+      rulerData.offsetDistance
+    );
+    scene.add(rulerData.group);
+  });
+}
+
 function clearRuler() {
   if (rulerGroup) {
     scene.remove(rulerGroup);
@@ -817,13 +896,15 @@ function clearRuler() {
     scene.remove(snapMarker);
     snapMarker = null;
   }
-  rulerStartPoint = null;
+  rulerState = 'waiting_first';
+  rulerFirstPoint = null;
+  rulerSecondPoint = null;
+  rulerOffsetDistance = 0;
 }
 
 function clearAllRulers() {
-  // Удаляем все сохранённые линейки
-  allRulerGroups.forEach(group => {
-    scene.remove(group);
+  allRulerGroups.forEach(rulerData => {
+    scene.remove(rulerData.group);
   });
   allRulerGroups = [];
   clearRuler();
@@ -844,25 +925,31 @@ renderer.domElement.addEventListener('click', (event) => {
     
     if (intersects.length > 0) {
       const point = intersects[0].point;
-      
-      // Пробуем привязаться к вершине
       const snappedPoint = snapToVertex(point);
       const finalPoint = snappedPoint || point;
       
-      if (!rulerStartPoint) {
-        // Первый клик - ставим начальную точку
-        rulerStartPoint = finalPoint.clone();
+      if (rulerState === 'waiting_first') {
+        // Первый клик - ставим первую точку
+        rulerFirstPoint = finalPoint.clone();
+        rulerState = 'waiting_second';
         
-      } else {
-        // Второй клик - ставим конечную точку и показываем результат
-        const endPoint = finalPoint.clone();
+      } else if (rulerState === 'waiting_second') {
+        // Второй клик - ставим вторую точку
+        rulerSecondPoint = finalPoint.clone();
+        rulerState = 'waiting_offset';
+        rulerOffsetDistance = 50; // Начальное смещение
         
-        // Создаём линейку с выноской
-        rulerGroup = createRulerWithExtension(rulerStartPoint, endPoint);
-        scene.add(rulerGroup);
-        allRulerGroups.push(rulerGroup); // Сохраняем для последующего удаления
-        
-        rulerStartPoint = null;
+      } else if (rulerState === 'waiting_offset') {
+        // Третий клик - фиксируем позицию выноски
+        const rulerData = {
+          startPoint: rulerFirstPoint.clone(),
+          endPoint: rulerSecondPoint.clone(),
+          offsetDistance: rulerOffsetDistance,
+          group: rulerGroup
+        };
+        allRulerGroups.push(rulerData);
+        rulerState = 'done';
+        rulerGroup = null;
       }
     }
     return;
@@ -895,7 +982,7 @@ renderer.domElement.addEventListener('click', (event) => {
   }
 });
 
-// Движение мыши для линейки с привязкой
+// Движение мыши для линейки
 renderer.domElement.addEventListener('mousemove', (event) => {
   if (!rulerMode) return;
   
@@ -908,8 +995,6 @@ renderer.domElement.addEventListener('mousemove', (event) => {
   
   if (intersects.length > 0) {
     const point = intersects[0].point;
-    
-    // Пробуем привязаться к вершине
     const snappedPoint = snapToVertex(point);
     const finalPoint = snappedPoint || point;
     
@@ -920,14 +1005,38 @@ renderer.domElement.addEventListener('mousemove', (event) => {
     snapMarker = createMarker(finalPoint, snappedPoint ? 0x00ff00 : 0xffff00, 6);
     scene.add(snapMarker);
     
-    if (rulerStartPoint) {
-      // Удаляем старую линейку
+    if (rulerState === 'waiting_second' && rulerFirstPoint) {
+      // Показываем линию между первой и текущей точкой
       if (rulerGroup) {
         scene.remove(rulerGroup);
       }
+      const tempLine = new THREE.Group();
+      const lineGeometry = new THREE.BufferGeometry().setFromPoints([rulerFirstPoint, finalPoint]);
+      const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0044cc, linewidth: 2, depthTest: false });
+      const line = new THREE.Line(lineGeometry, lineMaterial);
+      line.renderOrder = 999;
+      tempLine.add(line);
+      tempLine.add(createMarker(rulerFirstPoint, 0xff0000, 5));
+      tempLine.add(createMarker(finalPoint, 0xff0000, 5));
+      rulerGroup = tempLine;
+      scene.add(rulerGroup);
       
-      // Рисуем временную линейку с выноской
-      rulerGroup = createRulerWithExtension(rulerStartPoint, finalPoint);
+    } else if (rulerState === 'waiting_offset' && rulerFirstPoint && rulerSecondPoint) {
+      // Вычисляем перпендикулярное смещение
+      const midPoint = new THREE.Vector3().addVectors(rulerFirstPoint, rulerSecondPoint).multiplyScalar(0.5);
+      const dir = new THREE.Vector3().subVectors(rulerSecondPoint, rulerFirstPoint).normalize();
+      const cameraDir = new THREE.Vector3().subVectors(camera.position, midPoint).normalize();
+      const perpDir = new THREE.Vector3().crossVectors(dir, cameraDir).normalize();
+      
+      // Проекция вектора от midPoint до курсора на perpDir
+      const mouseDir = new THREE.Vector3().subVectors(finalPoint, midPoint);
+      rulerOffsetDistance = mouseDir.dot(perpDir);
+      
+      // Обновляем линейку
+      if (rulerGroup) {
+        scene.remove(rulerGroup);
+      }
+      rulerGroup = createRulerWithExtension(rulerFirstPoint, rulerSecondPoint, rulerOffsetDistance);
       scene.add(rulerGroup);
     }
   } else {
@@ -956,6 +1065,41 @@ rulerBtn.addEventListener('click', () => {
   }
 });
 
+// Настройки линейки
+const rulerSettingsBtn = document.getElementById('ruler-settings-btn');
+const rulerSettingsModal = document.getElementById('ruler-settings-modal');
+const closeRulerSettingsBtn = document.getElementById('close-ruler-settings');
+const fontSizeSlider = document.getElementById('font-size-slider');
+const fontSizeValue = document.getElementById('font-size-value');
+const applyRulerSettingsBtn = document.getElementById('apply-ruler-settings');
+
+rulerSettingsBtn.addEventListener('click', () => {
+  rulerSettingsModal.classList.add('show');
+});
+
+closeRulerSettingsBtn.addEventListener('click', () => {
+  rulerSettingsModal.classList.remove('show');
+});
+
+rulerSettingsModal.addEventListener('click', (e) => {
+  if (e.target === rulerSettingsModal) {
+    rulerSettingsModal.classList.remove('show');
+  }
+});
+
+fontSizeSlider.addEventListener('input', (e) => {
+  const size = parseInt(e.target.value);
+  fontSizeValue.textContent = size;
+  rulerSettings.fontSize = size;
+  rulerSettings.labelWidth = size * 8;
+  rulerSettings.labelHeight = size * 2;
+});
+
+applyRulerSettingsBtn.addEventListener('click', () => {
+  rulerSettingsModal.classList.remove('show');
+  updateAllRulers();
+});
+
 document.getElementById('clear-scene-btn').addEventListener('click', () => {
   if (sceneModels.length === 0) return;
   if (!confirm('Удалить все модели из сцены?')) return;
@@ -968,6 +1112,8 @@ document.getElementById('clear-scene-btn').addEventListener('click', () => {
   sceneModels = [];
   allMeshes = [];
   selectedObjects = [];
+  regularModelsCount = 0;
+  topModelsCount = 0;
   updateSceneListUI();
   
   // Удаляем все линейки
