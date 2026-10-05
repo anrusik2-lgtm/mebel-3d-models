@@ -212,10 +212,11 @@ kbd {
     <h2>📖 Как пользоваться конфигуратором</h2>
     <ul class="instruction-list">
       <li><strong>1.</strong> Нажмите <strong>➕</strong> чтобы добавить модель справа, или <strong>⬆️</strong> чтобы поставить сверху (антресоль).</li>
-      <li><strong>2.</strong> <strong>Вращайте</strong> сцену левой кнопкой мыши. <strong>Приближайте</strong> колесиком.</li>
-      <li><strong>3.</strong> <strong>Кликните</strong> по детали для выделения, затем выберите цвет справа.</li>
-      <li><strong>4.</strong> Зажмите <kbd>Ctrl</kbd> для выделения нескольких деталей.</li>
-      <li><strong>5.</strong> <strong>Линейка</strong>: включите режим, кликните на первую точку, затем на вторую, двигайте мышь для позиционирования выноски, кликните для фиксации.</li>
+      <li><strong>2.</strong> Антресоль автоматически ставится на последнее обычное изделие.</li>
+      <li><strong>3.</strong> <strong>Вращайте</strong> сцену левой кнопкой мыши. <strong>Приближайте</strong> колесиком.</li>
+      <li><strong>4.</strong> <strong>Кликните</strong> по детали для выделения, затем выберите цвет справа.</li>
+      <li><strong>5.</strong> Зажмите <kbd>Ctrl</kbd> для выделения нескольких деталей.</li>
+      <li><strong>6.</strong> <strong>Линейка</strong>: включите режим, кликните на первую точку, затем на вторую, двигайте мышь для позиционирования выноски, кликните для фиксации.</li>
     </ul>
     <div class="modal-note">
       💡 <em>Технические детали (задняя стенка, кромки, фурнитура) защищены от изменения цвета.</em>
@@ -424,6 +425,43 @@ document.getElementById('search-input').addEventListener('input', (e) => {
   ));
 });
 
+// Пересчёт позиций всех обычных моделей при изменении расстояния
+function recalculateRegularModelsPositions() {
+  const regularModels = sceneModels.filter(m => !m.isTop);
+  let currentX = 0;
+  
+  regularModels.forEach((model, index) => {
+    if (index === 0) {
+      model.group.position.x = 0;
+    } else {
+      // Вычисляем ширину предыдущей модели
+      const prevModel = regularModels[index - 1];
+      const prevBox = new THREE.Box3().setFromObject(prevModel.group);
+      const prevWidth = prevBox.max.x - prevBox.min.x;
+      
+      // Позиция = предыдущая позиция + ширина предыдущей + отступ
+      const prevPos = prevModel.group.position.x;
+      currentX = prevPos + prevWidth + rulerSettings.spacing;
+      model.group.position.x = currentX;
+    }
+    
+    // Обновляем позиции антресолей, если они есть на этой модели
+    const topModels = sceneModels.filter(m => m.isTop && m.parentModel === model);
+    topModels.forEach(topModel => {
+      const topBox = new THREE.Box3().setFromObject(topModel.group);
+      const modelBox = new THREE.Box3().setFromObject(model.group);
+      const modelCenter = modelBox.getCenter(new THREE.Vector3());
+      const topCenter = topBox.getCenter(new THREE.Vector3());
+      
+      topModel.group.position.x = modelCenter.x - topCenter.x;
+    });
+    
+    model.group.updateMatrixWorld(true);
+  });
+  
+  fitCameraToScene();
+}
+
 function processAndAddModel(gltf, modelName, addOnTop){
   const group = gltf.scene;
   
@@ -443,55 +481,78 @@ function processAndAddModel(gltf, modelName, addOnTop){
       return;
     }
     
-    // Антресоль должна ставиться на обычное изделие, не на другую антресоль
-    let targetObj = null;
-    if (selectedObjects.length > 0) {
-      targetObj = selectedObjects[0];
-      // Если выбрана антресоль, ищем обычное изделие под ней
-      if (targetObj.userData.isTopModel) {
-        // Ищем ближайшее обычное изделие по bounding box
-        const topBox = new THREE.Box3().setFromObject(targetObj);
-        let bestMatch = null;
-        let bestDistance = Infinity;
-        
-        sceneModels.forEach(sm => {
-          if (!sm.isTop) {
-            const smBox = new THREE.Box3().setFromObject(sm.group);
-            // Проверяем пересечение по X и Z
-            if (Math.abs(topBox.min.x - smBox.min.x) < 10 && Math.abs(topBox.min.z - smBox.min.z) < 10) {
-              const distance = Math.abs(topBox.min.y - smBox.max.y);
-              if (distance < bestDistance) {
-                bestDistance = distance;
-                bestMatch = sm.group;
-              }
-            }
-          }
-        });
-        
-        if (bestMatch) {
-          targetObj = bestMatch;
-        } else {
-          scene.remove(group);
-          alert('Антресоль должна устанавливаться на обычное изделие. Кликните по нужному изделию.');
-          return;
-        }
+    // Находим последнее обычное изделие без антресоли
+    const regularModels = sceneModels.filter(m => !m.isTop);
+    if (regularModels.length === 0) {
+      scene.remove(group);
+      alert('Сначала добавьте хотя бы одно обычное изделие.');
+      return;
+    }
+    
+    // Ищем последнее обычное изделие, на которое ещё не поставили антресоль
+    let targetModel = null;
+    for (let i = regularModels.length - 1; i >= 0; i--) {
+      const hasTop = sceneModels.some(m => m.isTop && m.parentModel === regularModels[i]);
+      if (!hasTop) {
+        targetModel = regularModels[i];
+        break;
       }
     }
     
-    if (targetObj) {
-      const targetBox = new THREE.Box3().setFromObject(targetObj);
-      const newBox = new THREE.Box3().setFromObject(group);
-      const targetCenter = targetBox.getCenter(new THREE.Vector3());
-      const newCenter = newBox.getCenter(new THREE.Vector3());
-
-      offsetY = targetBox.max.y - newBox.min.y;
-      offsetX = targetCenter.x - newCenter.x;
-      offsetZ = targetCenter.z - newCenter.z;
-    } else {
+    if (!targetModel) {
       scene.remove(group);
-      alert('Сначала кликните по обычному изделию, на которое хотите установить антресоль.');
+      alert('Все обычные изделия уже имеют антресоли.');
       return;
     }
+    
+    // Ставим антресоль на найденное изделие
+    const targetBox = new THREE.Box3().setFromObject(targetModel.group);
+    const newBox = new THREE.Box3().setFromObject(group);
+    const targetCenter = targetBox.getCenter(new THREE.Vector3());
+    const newCenter = newBox.getCenter(new THREE.Vector3());
+
+    offsetY = targetBox.max.y - newBox.min.y;
+    offsetX = targetCenter.x - newCenter.x;
+    offsetZ = targetCenter.z - newCenter.z;
+    
+    group.position.set(offsetX, offsetY, offsetZ);
+    group.updateMatrixWorld(true);
+    
+    const modelEntry = {
+      id: nextModelId++,
+      name: modelName,
+      group: group,
+      meshes: [],
+      isTop: true,
+      parentModel: targetModel
+    };
+    
+    group.traverse((child) => {
+      if(child.isMesh){
+        allMeshes.push(child);
+        modelEntry.meshes.push(child);
+        
+        if(Array.isArray(child.material)){
+          child.material = child.material.map(m => m.clone());
+          originalMaterials.set(child.uuid, child.material.map(m => m.clone()));
+        }else{
+          child.material = child.material.clone();
+          originalMaterials.set(child.uuid, child.material.clone());
+        }
+        
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        mats.forEach(mat => {
+          mat.side = THREE.DoubleSide;
+          mat.transparent = false;
+          mat.polygonOffset = true;
+          mat.polygonOffsetFactor = 1.0;
+        });
+      }
+    });
+    
+    sceneModels.push(modelEntry);
+    updateSceneListUI();
+    fitCameraToScene();
     
   } else {
     // Обычное изделие: максимум 2
@@ -502,69 +563,61 @@ function processAndAddModel(gltf, modelName, addOnTop){
       return;
     }
     
-    if (sceneModels.length > 0) {
-      // Вычисляем bounding box всех обычных моделей
-      const allModelsBox = new THREE.Box3();
-      sceneModels.forEach(sm => {
-        if (!sm.isTop) {
-          allModelsBox.union(new THREE.Box3().setFromObject(sm.group));
-        }
-      });
-      
-      const maxX = allModelsBox.max.x;
+    if (regularModels.length > 0) {
+      // Вычисляем позицию справа от последнего обычного изделия
+      const lastModel = regularModels[regularModels.length - 1];
+      const lastBox = new THREE.Box3().setFromObject(lastModel.group);
       const newBox = new THREE.Box3().setFromObject(group);
       const newWidth = newBox.max.x - newBox.min.x;
       
-      offsetX = maxX + newWidth + rulerSettings.spacing;
+      offsetX = lastBox.max.x + newWidth + rulerSettings.spacing;
       
-      console.log('Добавление модели. maxX:', maxX, 'ширина новой:', newWidth, 'позиция X:', offsetX);
+      console.log('Добавление модели. maxX последнего:', lastBox.max.x, 'ширина новой:', newWidth, 'позиция X:', offsetX);
     } else {
       offsetX = 0;
       offsetY = 0;
       offsetZ = 0;
     }
-  }
-
-  // Устанавливаем финальную позицию
-  group.position.set(offsetX, offsetY, offsetZ);
-  group.updateMatrixWorld(true);
-  
-  const modelEntry = {
-    id: nextModelId++,
-    name: modelName,
-    group: group,
-    meshes: [],
-    isTop: addOnTop
-  };
-  
-  // Помечаем все меши этой модели
-  group.traverse((child) => {
-    if(child.isMesh){
-      child.userData.isTopModel = addOnTop;
-      allMeshes.push(child);
-      modelEntry.meshes.push(child);
-      
-      if(Array.isArray(child.material)){
-        child.material = child.material.map(m => m.clone());
-        originalMaterials.set(child.uuid, child.material.map(m => m.clone()));
-      }else{
-        child.material = child.material.clone();
-        originalMaterials.set(child.uuid, child.material.clone());
+    
+    group.position.set(offsetX, offsetY, offsetZ);
+    group.updateMatrixWorld(true);
+    
+    const modelEntry = {
+      id: nextModelId++,
+      name: modelName,
+      group: group,
+      meshes: [],
+      isTop: false,
+      parentModel: null
+    };
+    
+    group.traverse((child) => {
+      if(child.isMesh){
+        allMeshes.push(child);
+        modelEntry.meshes.push(child);
+        
+        if(Array.isArray(child.material)){
+          child.material = child.material.map(m => m.clone());
+          originalMaterials.set(child.uuid, child.material.map(m => m.clone()));
+        }else{
+          child.material = child.material.clone();
+          originalMaterials.set(child.uuid, child.material.clone());
+        }
+        
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        mats.forEach(mat => {
+          mat.side = THREE.DoubleSide;
+          mat.transparent = false;
+          mat.polygonOffset = true;
+          mat.polygonOffsetFactor = 1.0;
+        });
       }
-      
-      const mats = Array.isArray(child.material) ? child.material : [child.material];
-      mats.forEach(mat => {
-        mat.side = THREE.DoubleSide;
-        mat.transparent = false;
-        mat.polygonOffset = true;
-        mat.polygonOffsetFactor = 1.0;
-      });
-    }
-  });
-  
-  sceneModels.push(modelEntry);
-  updateSceneListUI();
-  fitCameraToScene();
+    });
+    
+    sceneModels.push(modelEntry);
+    updateSceneListUI();
+    fitCameraToScene();
+  }
 }
 
 async function loadModel(model, element){
@@ -696,7 +749,7 @@ function updateSceneListUI(){
 
 function findAdjacentEdges(object){
   const objectBox = new THREE.Box3().setFromObject(object);
-  objectBox.expandByScalar(1.0); // Уменьшил с 2.0 до 1.0
+  objectBox.expandByScalar(1.0);
   const adjacent = [];
   const objCenter = objectBox.getCenter(new THREE.Vector3());
   
@@ -705,7 +758,6 @@ function findAdjacentEdges(object){
     const meshBox = new THREE.Box3().setFromObject(mesh);
     if(objectBox.intersectsBox(meshBox)){
       const meshCenter = meshBox.getCenter(new THREE.Vector3());
-      // Уменьшил допуск с 20 до 10
       if(Math.abs(objCenter.y - meshCenter.y) < 10) adjacent.push(mesh);
     }
   });
@@ -958,7 +1010,6 @@ renderer.domElement.addEventListener('click', (event) => {
         };
         allRulerGroups.push(rulerData);
         
-        // Сбрасываем состояние для новой линейки
         rulerState = 'waiting_first';
         rulerFirstPoint = null;
         rulerSecondPoint = null;
@@ -1061,7 +1112,7 @@ rulerBtn.addEventListener('click', () => {
   rulerMode = !rulerMode;
   
   if (rulerMode) {
-    rulerBtn.textContent = '📏 Линейка (вкл)';
+    rulerBtn.textContent = ' Линейка (вкл)';
     rulerBtn.classList.add('active');
     controls.enabled = false;
   } else {
@@ -1107,6 +1158,8 @@ spacingSlider.addEventListener('input', (e) => {
   const spacing = parseInt(e.target.value);
   spacingValue.textContent = spacing;
   rulerSettings.spacing = spacing;
+  // Интерактивно пересчитываем позиции моделей
+  recalculateRegularModelsPositions();
 });
 
 applyRulerSettingsBtn.addEventListener('click', () => {
