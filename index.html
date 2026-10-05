@@ -372,23 +372,39 @@ function applyMaterial(value){
     group = [selectedObject, ...findAdjacentEdges(selectedObject)];
   }
 
+  console.log('Применяем материал к объектам:', group.map(obj => ({
+    name: obj.name,
+    uuid: obj.uuid,
+    materialCount: Array.isArray(obj.material) ? obj.material.length : 1
+  })));
+
   textureLoader.load(value, (tex) => {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     
+    let changedCount = 0;
+    
     group.forEach(obj => {
       // Пропускаем детали, имя которых заканчивается на _NON
       if (obj.name && obj.name.endsWith('_NON')) {
+        console.log('Пропускаем деталь (NON):', obj.name);
         return;
       }
 
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-      mats.forEach(m => {
+      console.log(`Деталь "${obj.name}" имеет ${mats.length} материалов`);
+      
+      mats.forEach((m, idx) => {
         m.map = tex;
         m.color.setHex(0xffffff);
         m.needsUpdate = true;
+        changedCount++;
+        console.log(`  Материал ${idx} обновлен`);
       });
     });
+    
+    console.log(`Всего обновлено материалов: ${changedCount}`);
+    
   }, undefined, (err) => {
     console.error('Не удалось загрузить текстуру:', value, err);
     alert(`Не удалось загрузить текстуру:\n${value}`);
