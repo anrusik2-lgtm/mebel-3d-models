@@ -83,12 +83,15 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
   padding: 3px 6px; cursor: pointer; font-size: 10px; transition: background 0.2s;
 }
 .scene-item button:hover { background: #cc0000; }
-#clear-scene-btn {
-  width: 100%; margin-top: 8px; padding: 6px; background: #f5deb3; 
-  border: 2px solid #d4a76a; border-radius: 4px; cursor: pointer; 
-  font-weight: bold; font-size: 11px; transition: 0.2s;
+.scene-actions { display: flex; gap: 5px; margin-top: 8px; }
+#clear-scene-btn, #clear-rulers-btn {
+  flex: 1; padding: 6px; border-radius: 4px; cursor: pointer; 
+  font-weight: bold; font-size: 11px; transition: 0.2s; border: 2px solid;
 }
+#clear-scene-btn { background: #f5deb3; border-color: #d4a76a; color: #333; }
 #clear-scene-btn:hover { background: #f0d59a; }
+#clear-rulers-btn { background: #ffe0e0; border-color: #ff6666; color: #990000; }
+#clear-rulers-btn:hover { background: #ffd0d0; }
 
 .modal-backdrop {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -175,7 +178,10 @@ kbd {
       <span id="scene-count" style="background:#0044cc; color:white; padding:2px 5px; border-radius:8px; font-size:10px;">0</span>
     </h3>
     <div id="scene-list"></div>
-    <button id="clear-scene-btn">Очистить сцену</button>
+    <div class="scene-actions">
+      <button id="clear-scene-btn">Очистить сцену</button>
+      <button id="clear-rulers-btn">Удалить линейки</button>
+    </div>
   </div>
 </div>
 
@@ -216,7 +222,7 @@ kbd {
       <li><strong>3.</strong> <strong>Вращайте</strong> сцену левой кнопкой мыши. <strong>Приближайте</strong> колесиком.</li>
       <li><strong>4.</strong> <strong>Кликните</strong> по детали для выделения, затем выберите цвет справа.</li>
       <li><strong>5.</strong> Зажмите <kbd>Ctrl</kbd> для выделения нескольких деталей.</li>
-      <li><strong>6.</strong> <strong>Линейка</strong>: включите режим, кликните на первую точку, затем на вторую, двигайте мышь для позиционирования выноски, кликните для фиксации.</li>
+      <li><strong>6.</strong> <strong>Линейка</strong>: включите режим, кликните на первую точку, затем на вторую, двигайте мышь в любую сторону для позиционирования выноски, кликните для фиксации.</li>
     </ul>
     <div class="modal-note">
       💡 <em>Технические детали (задняя стенка, кромки, фурнитура) защищены от изменения цвета.</em>
@@ -230,12 +236,12 @@ kbd {
     <button class="modal-close" id="close-ruler-settings">&times;</button>
     <h2>⚙️ Настройки</h2>
     <div class="settings-group">
-      <label>Размер текста: <span class="settings-value" id="font-size-value">50</span>px</label>
-      <input type="range" id="font-size-slider" min="50" max="100" value="50">
+      <label>Размер текста: <span class="settings-value" id="font-size-value">120</span>px</label>
+      <input type="range" id="font-size-slider" min="75" max="300" value="120">
     </div>
     <div class="settings-group">
-      <label>Расстояние между изделиями: <span class="settings-value" id="spacing-value">150</span></label>
-      <input type="range" id="spacing-slider" min="50" max="300" value="150">
+      <label>Расстояние между изделиями: <span class="settings-value" id="spacing-value">0</span></label>
+      <input type="range" id="spacing-slider" min="0" max="200" value="0">
     </div>
     <button class="modal-ok-btn" id="apply-ruler-settings">Применить</button>
   </div>
@@ -329,12 +335,15 @@ let snapMarker = null;
 let allRulerGroups = [];
 const SNAP_DISTANCE = 15;
 
+// Фиксированное направление выноски при измерении
+let fixedPerpDir = null;
+
 // Настройки
 let rulerSettings = {
-  fontSize: 50,
-  labelWidth: 400,
-  labelHeight: 100,
-  spacing: 150
+  fontSize: 120,
+  labelWidth: 960,
+  labelHeight: 240,
+  spacing: 0
 };
 
 function initScene(){
@@ -428,24 +437,20 @@ document.getElementById('search-input').addEventListener('input', (e) => {
 // Пересчёт позиций всех обычных моделей при изменении расстояния
 function recalculateRegularModelsPositions() {
   const regularModels = sceneModels.filter(m => !m.isTop);
-  let currentX = 0;
   
   regularModels.forEach((model, index) => {
     if (index === 0) {
       model.group.position.x = 0;
     } else {
-      // Вычисляем ширину предыдущей модели
       const prevModel = regularModels[index - 1];
       const prevBox = new THREE.Box3().setFromObject(prevModel.group);
       const prevWidth = prevBox.max.x - prevBox.min.x;
-      
-      // Позиция = предыдущая позиция + ширина предыдущей + отступ
       const prevPos = prevModel.group.position.x;
-      currentX = prevPos + prevWidth + rulerSettings.spacing;
+      const currentX = prevPos + prevWidth + rulerSettings.spacing;
       model.group.position.x = currentX;
     }
     
-    // Обновляем позиции антресолей, если они есть на этой модели
+    // Обновляем позиции антресолей на этой модели
     const topModels = sceneModels.filter(m => m.isTop && m.parentModel === model);
     topModels.forEach(topModel => {
       const topBox = new THREE.Box3().setFromObject(topModel.group);
@@ -465,7 +470,6 @@ function recalculateRegularModelsPositions() {
 function processAndAddModel(gltf, modelName, addOnTop){
   const group = gltf.scene;
   
-  // Сначала добавляем модель в сцену с позицией (0,0,0) для корректного вычисления bounding box
   group.position.set(0, 0, 0);
   scene.add(group);
   group.updateMatrixWorld(true);
@@ -473,7 +477,6 @@ function processAndAddModel(gltf, modelName, addOnTop){
   let offsetX = 0, offsetY = 0, offsetZ = 0;
 
   if (addOnTop) {
-    // Проверка: максимум 2 антресоли
     const topModels = sceneModels.filter(m => m.isTop);
     if (topModels.length >= 2) {
       scene.remove(group);
@@ -481,7 +484,6 @@ function processAndAddModel(gltf, modelName, addOnTop){
       return;
     }
     
-    // Находим последнее обычное изделие без антресоли
     const regularModels = sceneModels.filter(m => !m.isTop);
     if (regularModels.length === 0) {
       scene.remove(group);
@@ -489,7 +491,6 @@ function processAndAddModel(gltf, modelName, addOnTop){
       return;
     }
     
-    // Ищем последнее обычное изделие, на которое ещё не поставили антресоль
     let targetModel = null;
     for (let i = regularModels.length - 1; i >= 0; i--) {
       const hasTop = sceneModels.some(m => m.isTop && m.parentModel === regularModels[i]);
@@ -505,7 +506,6 @@ function processAndAddModel(gltf, modelName, addOnTop){
       return;
     }
     
-    // Ставим антресоль на найденное изделие
     const targetBox = new THREE.Box3().setFromObject(targetModel.group);
     const newBox = new THREE.Box3().setFromObject(group);
     const targetCenter = targetBox.getCenter(new THREE.Vector3());
@@ -555,7 +555,6 @@ function processAndAddModel(gltf, modelName, addOnTop){
     fitCameraToScene();
     
   } else {
-    // Обычное изделие: максимум 2
     const regularModels = sceneModels.filter(m => !m.isTop);
     if (regularModels.length >= 2) {
       scene.remove(group);
@@ -564,7 +563,6 @@ function processAndAddModel(gltf, modelName, addOnTop){
     }
     
     if (regularModels.length > 0) {
-      // Вычисляем позицию справа от последнего обычного изделия
       const lastModel = regularModels[regularModels.length - 1];
       const lastBox = new THREE.Box3().setFromObject(lastModel.group);
       const newBox = new THREE.Box3().setFromObject(group);
@@ -965,6 +963,7 @@ function clearRuler() {
   rulerFirstPoint = null;
   rulerSecondPoint = null;
   rulerOffsetDistance = 0;
+  fixedPerpDir = null;
 }
 
 function clearAllRulers() {
@@ -1001,6 +1000,12 @@ renderer.domElement.addEventListener('click', (event) => {
         rulerState = 'waiting_offset';
         rulerOffsetDistance = 50;
         
+        // Фиксируем направление выноски на основе текущего положения камеры
+        const midPoint = new THREE.Vector3().addVectors(rulerFirstPoint, rulerSecondPoint).multiplyScalar(0.5);
+        const dir = new THREE.Vector3().subVectors(rulerSecondPoint, rulerFirstPoint).normalize();
+        const cameraDir = new THREE.Vector3().subVectors(camera.position, midPoint).normalize();
+        fixedPerpDir = new THREE.Vector3().crossVectors(dir, cameraDir).normalize();
+        
       } else if (rulerState === 'waiting_offset') {
         const rulerData = {
           startPoint: rulerFirstPoint.clone(),
@@ -1015,6 +1020,7 @@ renderer.domElement.addEventListener('click', (event) => {
         rulerSecondPoint = null;
         rulerOffsetDistance = 0;
         rulerGroup = null;
+        fixedPerpDir = null;
       }
     }
     return;
@@ -1045,6 +1051,21 @@ renderer.domElement.addEventListener('click', (event) => {
     selectedObjects = [];
   }
 });
+
+// Проекция точки мыши на плоскость через midPoint с нормалью dir
+function projectMouseToPlane(mouseX, mouseY, midPoint, planeNormal) {
+  const raycasterLocal = new THREE.Raycaster();
+  const mouseLocal = new THREE.Vector2(mouseX, mouseY);
+  raycasterLocal.setFromCamera(mouseLocal, camera);
+  
+  const plane = new THREE.Plane();
+  plane.setFromNormalAndCoplanarPoint(planeNormal, midPoint);
+  
+  const target = new THREE.Vector3();
+  raycasterLocal.ray.intersectPlane(plane, target);
+  
+  return target;
+}
 
 renderer.domElement.addEventListener('mousemove', (event) => {
   if (!rulerMode) return;
@@ -1082,14 +1103,17 @@ renderer.domElement.addEventListener('mousemove', (event) => {
       rulerGroup = tempLine;
       scene.add(rulerGroup);
       
-    } else if (rulerState === 'waiting_offset' && rulerFirstPoint && rulerSecondPoint) {
+    } else if (rulerState === 'waiting_offset' && rulerFirstPoint && rulerSecondPoint && fixedPerpDir) {
       const midPoint = new THREE.Vector3().addVectors(rulerFirstPoint, rulerSecondPoint).multiplyScalar(0.5);
       const dir = new THREE.Vector3().subVectors(rulerSecondPoint, rulerFirstPoint).normalize();
-      const cameraDir = new THREE.Vector3().subVectors(camera.position, midPoint).normalize();
-      const perpDir = new THREE.Vector3().crossVectors(dir, cameraDir).normalize();
       
-      const mouseDir = new THREE.Vector3().subVectors(finalPoint, midPoint);
-      rulerOffsetDistance = mouseDir.dot(perpDir);
+      // Проецируем луч мыши на плоскость через midPoint с нормалью dir
+      const projectedPoint = projectMouseToPlane(mouse.x, mouse.y, midPoint, dir);
+      
+      if (projectedPoint) {
+        const mouseDir = new THREE.Vector3().subVectors(projectedPoint, midPoint);
+        rulerOffsetDistance = mouseDir.dot(fixedPerpDir);
+      }
       
       if (rulerGroup) {
         scene.remove(rulerGroup);
@@ -1112,7 +1136,7 @@ rulerBtn.addEventListener('click', () => {
   rulerMode = !rulerMode;
   
   if (rulerMode) {
-    rulerBtn.textContent = ' Линейка (вкл)';
+    rulerBtn.textContent = '📏 Линейка (вкл)';
     rulerBtn.classList.add('active');
     controls.enabled = false;
   } else {
@@ -1158,7 +1182,6 @@ spacingSlider.addEventListener('input', (e) => {
   const spacing = parseInt(e.target.value);
   spacingValue.textContent = spacing;
   rulerSettings.spacing = spacing;
-  // Интерактивно пересчитываем позиции моделей
   recalculateRegularModelsPositions();
 });
 
@@ -1181,12 +1204,18 @@ document.getElementById('clear-scene-btn').addEventListener('click', () => {
   selectedObjects = [];
   updateSceneListUI();
   
-  clearAllRulers();
-  
   camera.position.set(0, 0, 10);
   camera.lookAt(0, 0, 0);
   controls.target.set(0, 0, 0);
   controls.update();
+});
+
+document.getElementById('clear-rulers-btn').addEventListener('click', () => {
+  if (allRulerGroups.length === 0) {
+    alert('На сцене нет линеек.');
+    return;
+  }
+  clearAllRulers();
 });
 
 document.getElementById('screenshot-btn').addEventListener('click', () => {
