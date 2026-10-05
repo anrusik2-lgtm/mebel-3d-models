@@ -1,0 +1,25 @@
+{
+  "models": [
+    {
+      "id": 1,
+      "name": "Антресоль для шкафа №4",
+      "file": "antresol_dlya_shkafa_4.glb",
+      "category": "шкафы",
+      "tags": ["антресоль", "шкаф", "детская"]
+    },
+    {
+      "id": 2,
+      "name": "Кухня игровая Эмили",
+      "file": "kuhnya_igrovaya_emili.glb",
+      "category": "кухни",
+      "tags": ["кухня", "игровая", "детская"]
+    },
+    {
+      "id": 3,
+      "name": "Парикмахер игровой №1",
+      "file": "parikmaher_igrovoi_1.glb",
+      "category": "детская",
+      "tags": ["парикмахер", "игровая", "детская"]
+    }
+  ]
+}
