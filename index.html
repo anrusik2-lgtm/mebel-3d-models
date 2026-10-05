@@ -179,8 +179,8 @@ const paintTextures = [
 ];
 
 let scene, camera, renderer, controls, currentModel, selectedObject;
-let allMeshes = [], edgeObjects = new Set(), originalMaterials = new Map();
-let modelsData = [], EDGE_THRESHOLD = 0.005, NEIGHBOR_TOLERANCE = 0.00005;
+let allMeshes = [], originalMaterials = new Map();
+let modelsData = [];
 
 function initScene(){
   const viewport = document.getElementById('viewport');
@@ -293,16 +293,12 @@ function processModel(model, modelName){
   currentModel = model;
   scene.add(model);
   allMeshes = [];
-  edgeObjects.clear();
   originalMaterials.clear();
   selectedObject = null;
 
   const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z);
-
-  EDGE_THRESHOLD     = maxDim > 100 ? 2.0    : 0.002;
-  NEIGHBOR_TOLERANCE = maxDim > 100 ? 0.05   : 0.00005;
 
   model.traverse((child) => {
     if(child.isMesh){
@@ -316,10 +312,6 @@ function processModel(model, modelName){
         originalMaterials.set(child.uuid, child.material.clone());
       }
 
-      const childSize = new THREE.Box3().setFromObject(child).getSize(new THREE.Vector3());
-      const minSide = Math.min(childSize.x, childSize.y, childSize.z);
-      if(minSide < EDGE_THRESHOLD && minSide > 0) edgeObjects.add(child);
-
       const mats = Array.isArray(child.material) ? child.material : [child.material];
       mats.forEach(mat => {
         mat.side = THREE.DoubleSide;
@@ -329,18 +321,6 @@ function processModel(model, modelName){
       });
     }
   });
-
-    // === НОВЫЙ КОД: вывод структуры модели ===
-  console.log('=== СТРУКТУРА МОДЕЛИ ===');
-  console.log(`Всего мешей: ${allMeshes.length}`);
-  allMeshes.forEach((mesh, idx) => {
-    const meshBox = new THREE.Box3().setFromObject(mesh);
-    const meshSize = meshBox.getSize(new THREE.Vector3());
-    const meshCenter = meshBox.getCenter(new THREE.Vector3());
-    console.log(`[${idx}] Имя: "${mesh.name}" | Размер: ${meshSize.x.toFixed(3)}x${meshSize.y.toFixed(3)}x${meshSize.z.toFixed(3)} | Центр: ${meshCenter.x.toFixed(3)}, ${meshCenter.y.toFixed(3)}, ${meshCenter.z.toFixed(3)}`);
-  });
-  console.log('=== КОНЕЦ СТРУКТУРЫ ===');
-  // === КОНЕЦ НОВОГО КОДА ===
 
   const center = box.getCenter(new THREE.Vector3());
   const fov = camera.fov * (Math.PI / 180);
@@ -352,16 +332,30 @@ function processModel(model, modelName){
   controls.update();
 }
 
-function findAdjacentEdges(object){
+// === НОВАЯ УМНАЯ ФУНКЦИЯ ПОИСКА СОСЕДНИХ ДЕТАЛЕЙ ===
+function findConnectedParts(object) {
   const objectBox = new THREE.Box3().setFromObject(object);
-  objectBox.expandByScalar(NEIGHBOR_TOLERANCE);
-  const adjacent = [];
-  edgeObjects.forEach(edge => {
-    if(edge !== object && objectBox.intersectsBox(new THREE.Box3().setFromObject(edge))){
-      adjacent.push(edge);
+  // Расширяем границы на 2 единицы, чтобы гарантированно захватить соприкасающиеся детали (радиусы, кромки)
+  objectBox.expandByScalar(2.0);
+
+  const connected = [];
+  const objCenter = objectBox.getCenter(new THREE.Vector3());
+
+  allMeshes.forEach(mesh => {
+    if (mesh === object) return; // Саму деталь уже добавим отдельно
+
+    const meshBox = new THREE.Box3().setFromObject(mesh);
+    // Если границы пересекаются
+    if (objectBox.intersectsBox(meshBox)) {
+      const meshCenter = meshBox.getCenter(new THREE.Vector3());
+      // Проверяем, что детали находятся примерно на одной высоте (разница по Y не более 20 единиц)
+      // Это предотвратит случайное выделение ножек или других деталей, находящихся под столешницей
+      if (Math.abs(objCenter.y - meshCenter.y) < 20) {
+        connected.push(mesh);
+      }
     }
   });
-  return adjacent;
+  return connected;
 }
 
 const textureLoader = new THREE.TextureLoader();
@@ -381,42 +375,27 @@ function applyMaterial(value){
       alert('Сначала кликните по детали в 3D-сцене');
       return;
     }
-    group = [selectedObject, ...findAdjacentEdges(selectedObject)];
+    // Используем новую функцию: выбранная деталь + все соприкасающиеся части (радиусы)
+    group = [selectedObject, ...findConnectedParts(selectedObject)];
   }
-
-  console.log('Применяем материал к объектам:', group.map(obj => ({
-    name: obj.name,
-    uuid: obj.uuid,
-    materialCount: Array.isArray(obj.material) ? obj.material.length : 1
-  })));
 
   textureLoader.load(value, (tex) => {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     
-    let changedCount = 0;
-    
     group.forEach(obj => {
       // Пропускаем детали, имя которых заканчивается на _NON
       if (obj.name && obj.name.endsWith('_NON')) {
-        console.log('Пропускаем деталь (NON):', obj.name);
         return;
       }
 
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-      console.log(`Деталь "${obj.name}" имеет ${mats.length} материалов`);
-      
-      mats.forEach((m, idx) => {
+      mats.forEach(m => {
         m.map = tex;
         m.color.setHex(0xffffff);
         m.needsUpdate = true;
-        changedCount++;
-        console.log(`  Материал ${idx} обновлен`);
       });
     });
-    
-    console.log(`Всего обновлено материалов: ${changedCount}`);
-    
   }, undefined, (err) => {
     console.error('Не удалось загрузить текстуру:', value, err);
     alert(`Не удалось загрузить текстуру:\n${value}`);
