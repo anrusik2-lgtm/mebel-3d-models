@@ -178,9 +178,12 @@ const paintTextures = [
   {name:'Голубой',           image:'textures/K016.jpg'}
 ];
 
-let scene, camera, renderer, controls, currentModel, selectedObject;
+let scene, camera, renderer, controls, currentModel;
 let allMeshes = [], edgeObjects = new Set(), originalMaterials = new Map();
 let modelsData = [], EDGE_THRESHOLD = 0.005, NEIGHBOR_TOLERANCE = 0.00005;
+
+// ИЗМЕНЕНИЕ: теперь это массив для хранения нескольких выбранных объектов
+let selectedObjects = []; 
 
 function initScene(){
   const viewport = document.getElementById('viewport');
@@ -295,7 +298,7 @@ function processModel(model, modelName){
   allMeshes = [];
   edgeObjects.clear();
   originalMaterials.clear();
-  selectedObject = null;
+  selectedObjects = []; // Сброс выбора при загрузке новой модели
 
   const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3());
@@ -357,7 +360,7 @@ const textureLoader = new THREE.TextureLoader();
 function applyMaterial(value){
   const applyToAll = document.getElementById('apply-to-all').checked;
   
-  let group;
+  let group = [];
   if(applyToAll){
     if(!currentModel || allMeshes.length === 0){
       alert('Сначала загрузите модель');
@@ -365,11 +368,22 @@ function applyMaterial(value){
     }
     group = allMeshes;
   }else{
-    if(!selectedObject){
-      alert('Сначала кликните по детали в 3D-сцене');
+    if(selectedObjects.length === 0){
+      alert('Сначала кликните по детали (или по нескольким с зажатым Ctrl) в 3D-сцене');
       return;
     }
-    group = [selectedObject, ...findAdjacentEdges(selectedObject)];
+    
+    // ИЗМЕНЕНИЕ: собираем все выбранные объекты и их кромки в одну группу без дубликатов
+    selectedObjects.forEach(obj => {
+      if (!group.includes(obj)) group.push(obj);
+      
+      const edges = findAdjacentEdges(obj);
+      edges.forEach(edge => {
+        if (!group.includes(edge)) {
+          group.push(edge);
+        }
+      });
+    });
   }
 
   textureLoader.load(value, (tex) => {
@@ -408,7 +422,7 @@ function resetModel(){
     const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
     mats.forEach(m => m.needsUpdate = true);
   });
-  selectedObject = null;
+  selectedObjects = []; // Сброс массива выбора
 }
 
 const raycaster = new THREE.Raycaster();
@@ -424,18 +438,38 @@ renderer.domElement.addEventListener('click', (event) => {
   raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObjects(allMeshes, true);
 
+  // Сначала снимаем подсветку со всех объектов
+  allMeshes.forEach(m => {
+    const mats = Array.isArray(m.material) ? m.material : [m.material];
+    mats.forEach(mt => { if(mt.emissive) mt.emissive.setHex(0x000000); });
+  });
+
   if(intersects.length > 0){
-    selectedObject = intersects[0].object;
+    const clickedObject = intersects[0].object;
 
-    allMeshes.forEach(m => {
-      const mats = Array.isArray(m.material) ? m.material : [m.material];
-      mats.forEach(mt => mt.emissive && mt.emissive.setHex(0x000000));
+    // ИЗМЕНЕНИЕ: логика мультивыбора с зажатым Ctrl (или Cmd на Mac)
+    if (event.ctrlKey || event.metaKey) {
+      const index = selectedObjects.indexOf(clickedObject);
+      if (index > -1) {
+        // Если уже выбран - убираем из массива
+        selectedObjects.splice(index, 1);
+      } else {
+        // Если не выбран - добавляем в массив
+        selectedObjects.push(clickedObject);
+      }
+    } else {
+      // Обычный клик без Ctrl: сбрасываем старый выбор и выбираем только новый
+      selectedObjects = [clickedObject];
+    }
+
+    // Подсвечиваем все объекты, которые сейчас в массиве selectedObjects
+    selectedObjects.forEach(obj => {
+      const selMats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      selMats.forEach(m => { if(m.emissive) m.emissive.setHex(0x444444); });
     });
-
-    const selMats = Array.isArray(selectedObject.material)
-      ? selectedObject.material
-      : [selectedObject.material];
-    selMats.forEach(m => { if(m.emissive) m.emissive.setHex(0x444444); });
+  } else {
+    // Клик в пустоту сбрасывает выделение
+    selectedObjects = [];
   }
 });
 
