@@ -2,15 +2,14 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>3D Конфигуратор - Вилена</title>
+<title>3D Конфигуратор</title>
 <link rel="icon" href="data:,">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,sans-serif;overflow:hidden;background:#f0f0f0}
+body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 #sidebar{position:absolute;left:0;top:0;width:320px;height:100vh;background:white;box-shadow:2px 0 10px rgba(0,0,0,0.1);display:flex;flex-direction:column;z-index:100}
-#sidebar-header{padding:20px;background:#0044cc;color:white}
-#sidebar-header h1{font-size:20px;margin-bottom:5px}
-#sidebar-header p{font-size:12px;opacity:0.9}
+#sidebar-header{padding:15px 20px;background:#0044cc;color:white}
+#sidebar-header h1{font-size:16px;font-weight:bold}
 #search-box{padding:15px;border-bottom:1px solid #ddd}
 #search-input{width:100%;padding:12px;border:2px solid #ddd;border-radius:8px;font-size:14px}
 #model-list{flex:1;overflow-y:auto;padding:10px}
@@ -20,7 +19,7 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#f0f0f0}
 .model-item h3{font-size:14px;margin-bottom:5px}
 .model-item .category{font-size:11px;color:#666;display:inline-block;background:#ddd;padding:2px 8px;border-radius:4px}
 .model-item.active .category{background:rgba(255,255,255,0.3);color:white}
-#main-area{position:absolute;left:320px;right:300px;top:0;bottom:0}
+#main-area{position:absolute;left:320px;right:300px;top:0;bottom:0;background:#ffffff}
 #viewport{width:100%;height:100%}
 #settings-panel{position:absolute;right:0;top:0;width:300px;height:100vh;background:white;box-shadow:-2px 0 10px rgba(0,0,0,0.1);display:flex;flex-direction:column;z-index:100}
 .tabs{display:flex;border-bottom:2px solid #ddd}
@@ -31,7 +30,7 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#f0f0f0}
 .color-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .color-btn{width:100%;aspect-ratio:1;border:3px solid #fff;border-radius:8px;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,0.2)}
 .color-btn:hover{transform:scale(1.1)}
-.category-title{font-weight:bold;margin:20px 0 10px 0;color:#333;border-bottom:2px solid #ddd;padding-bottom:5px}
+.category-title{font-weight:bold;margin:20px 0 10px 0;color:#333;border-bottom:2px solid #ddd;padding-bottom:5px;font-size:13px;letter-spacing:0.5px}
 .category-title:first-child{margin-top:0}
 .texture-item{display:flex;align-items:center;margin-bottom:10px;padding:8px;border:1px solid #eee;border-radius:6px;cursor:pointer;transition:background 0.15s}
 .texture-item:hover{background:#f0f8ff;border-color:#0044cc}
@@ -39,6 +38,8 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#f0f0f0}
 .texture-name{font-size:13px;font-weight:bold}
 #reset-btn{margin:15px;padding:12px;background:#f5deb3;border:2px solid #d4a76a;border-radius:8px;cursor:pointer;font-weight:bold;font-size:14px}
 #reset-btn:hover{background:#f0d59a}
+#screenshot-btn{margin:0 15px 15px 15px;padding:12px;background:#e3f2fd;border:2px solid #0044cc;color:#0044cc;border-radius:8px;cursor:pointer;font-weight:bold;font-size:14px}
+#screenshot-btn:hover{background:#c8e3fc}
 #loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);color:white;padding:30px;border-radius:12px;z-index:200;display:none;text-align:center}
 #loading.show{display:block}
 .spinner{width:50px;height:50px;border:5px solid #f3f3f3;border-top:5px solid #0044cc;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 15px}
@@ -57,7 +58,7 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#f0f0f0}
 <body>
 
 <div id="sidebar">
-  <div id="sidebar-header"><h1>Вилена</h1><p>3D конфигуратор</p></div>
+  <div id="sidebar-header"><h1>Каталог моделей</h1></div>
   <div id="search-box"><input type="text" id="search-input" placeholder="Поиск модели..."></div>
   <div id="model-list">
     <div style="text-align:center;padding:40px;color:#999">
@@ -87,7 +88,8 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#f0f0f0}
     </div>
   </div>
   <div id="textures" class="tab-content"><div id="texture-list"></div></div>
-  <button id="reset-btn" data-type="reset">Вернуть материал</button>
+  <button id="reset-btn">Вернуть материал</button>
+  <button id="screenshot-btn">Скачать изображение</button>
 </div>
 
 <div id="loading"><div class="spinner"></div><div id="loading-text">Загрузка...</div></div>
@@ -97,38 +99,52 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 
-/* === ПУТИ ===
-   models.json и .glb лежат рядом с index.html.
-   Текстуры — в папке textures/. */
 const MODELS_URL = 'models.json';
 const RAW_BASE = './';
 
-/* === СПИСОК ТЕКСТУР ===
-   Все файлы лежат в папке textures/ рядом с index.html. */
+/* === СПИСОК ТЕКСТУР === */
 const texturesData = [
-  // 🎨 Фантазийные / цветные
-  {category:'fantasy', name:'Лимонный сорбет',      image:'textures/limonnyy_sorbet_7123_ultradecor.jpg'},
-  {category:'fantasy', name:'Песочный 0515',        image:'textures/pesochnyy_0515_ultradecor.jpg'},
-  {category:'fantasy', name:'Оранжевый 0132',       image:'textures/oranzhevyy_0132_ultradecor.jpg'},
-  {category:'fantasy', name:'Оранжевый цитрус',     image:'textures/oranzhevyy_tsitrusovyy_m702_extravert.jpg'},
-  {category:'fantasy', name:'Розовый маревый',      image:'textures/rozovyy_marevyy_m.705_extravert.jpg'},
-  {category:'fantasy', name:'Салатовый',            image:'textures/salatovyy.jpg'},
-  {category:'fantasy', name:'Солнечный свет 0134',  image:'textures/solnechnyy_svet_0134_ultradecor.jpg'},
-  {category:'fantasy', name:'Зелёный лайм 5519',    image:'textures/zelenyy_laym_5519_ultradecor.jpg'},
-  {category:'fantasy', name:'Зелёный ивовый',       image:'textures/zelyonyy_ivovyy_m607_extravert.jpg'},
-  {category:'fantasy', name:'Зелёный мятный',       image:'textures/zelyonyy_myatnyy_m605_extravert.jpg'},
-  {category:'fantasy', name:'Зелёный оксид 6561',   image:'textures/zelyonyy_oksid_6561_ultradecor.jpg'},
+  // 🎨 Фантазийные
+  {category:'fantasy', name:'Лимонный сорбет',   image:'textures/limonnyy_sorbet_7123_ultradecor.jpg'},
+  {category:'fantasy', name:'Песочный',          image:'textures/pesochnyy_0515_ultradecor.jpg'},
+  {category:'fantasy', name:'Оранжевый цитрус',  image:'textures/oranzhevyy_tsitrusovyy_m702_extravert.jpg'},
+  {category:'fantasy', name:'Розовый маревый',   image:'textures/rozovyy_marevyy_m705_extravert.jpg'},
+  {category:'fantasy', name:'Салатовый',              image:'textures/salatovyy.jpg'},
+  {category:'fantasy', name:'Солнечный свет',    image:'textures/solnechnyy_svet_0134_ultradecor.jpg'},
+  {category:'fantasy', name:'Лимонный',               image:'textures/limonnyy_nordeco.jpg'},
+  {category:'fantasy', name:'Бежевый ивовый',       image:'textures/bezhevyy_inanoy_m328_ultradecor.jpg'},
+  {category:'fantasy', name:'Зелёный лайм',      image:'textures/zelenyy_laym_5519_ultradecor.jpg'},
+  {category:'fantasy', name:'Зелёный ивовый7',    image:'textures/zelenyy_ivovyy_m607_extravert.jpg'},
+  {category:'fantasy', name:'Зелёный мятный',    image:'textures/zelenyy_myatnyy_m605_extravert.jpg'},
+  {category:'fantasy', name:'Зелёный оксид',     image:'textures/zelenyy_oksid_6561_ultradecor.jpg'},
+  {category:'fantasy', name:'Красный',           image:'textures/krasnyy_0149_ultradecor.jpg'},
+  {category:'fantasy', name:'Королевский синий', image:'textures/korolevskiy_siniy_0125_ultradecor.jpg'},
+  {category:'fantasy', name:'Лазурный голубой',  image:'textures/lazurnyy_goluboy_k517_ultradecor.jpg'},
+  {category:'fantasy', name:'Капри синий',       image:'textures/kapri_siniy_0121_ultradecor.jpg'},
+  {category:'fantasy', name:'Лаванда',          image:'textures/lavanda_u7501_uvadrev_.jpg'},
+  {category:'fantasy', name:'Аура',                   image:'textures/aura_lamarty.jpg'},
+  {category:'fantasy', name:'Ирис',                   image:'textures/iris_lamarty.jpg'},
 
-  // 🪵 Стандартные / под дерево
-  {category:'standard', name:'Ольха классическая',  image:'textures/olkha_klassicheskaya.jpg'},
-  {category:'standard', name:'Орех Экко 9459',      image:'textures/orekh_ekko_9459_ultradecor.jpg'},
-  {category:'standard', name:'Орех Гварнери 9455',  image:'textures/orekh_gvarneri_9455_ultradecor.jpg'},
-  {category:'standard', name:'Орех Мария-Луиза',    image:'textures/orekh_mariya_luiza_(italyanskiy)_9490_ultradecor.jpg'},
-  {category:'standard', name:'Титан 0282 невский',  image:'textures/titan_0282_nevskiy_laminat_.jpg'},
-  {category:'standard', name:'Венге Тсаво 3354',    image:'textures/venge_tsavo_3354_ultradecor.jpg'},
-  {category:'standard', name:'Вишня Оксфорд',       image:'textures/vishnya_oksford.jpg'},
-  {category:'standard', name:'Ясень Шимо светлый',  image:'textures/yasen_shimo_svetlyy_3356_ultradecor.jpg'},
-  {category:'standard', name:'Ясень Шимо тёмный',   image:'textures/yasen_shimo_temnyy_3357_ultradecor.jpg'}
+  // 🪵 Стандартные
+  {category:'standard', name:'Белый',                image:'textures/belyy_6459_ultradecor.jpg'},
+  {category:'standard', name:'Берёза',               image:'textures/bereza_1715_ultradecor.jpg'},
+  {category:'standard', name:'Бук Бавария светлый',       image:'textures/buk_bavariya_svetlyy_nordeco_.jpg'},
+  {category:'standard', name:'Чёрный',             image:'textures/chernyy_u2200m_extravert.jpg'},
+  {category:'standard', name:'Дуб Атланта',               image:'textures/dub_atlanta_nordeco.jpg'},
+  {category:'standard', name:'Дуб Феррара',          image:'textures/dub_ferrara_8921_ultradecor.jpg'},
+  {category:'standard', name:'Дуб коломенский молочный',  image:'textures/dub_kolomenskiy_molochnyy_d.341_extravert_.jpg'},
+  {category:'standard', name:'Дуб млечный',               image:'textures/dub_mlechnyy_nordeco.jpg'},
+  {category:'standard', name:'Дуб Шамони светлый',    image:'textures/dub_shamoni_svetlyy_004_ultradecor.jpg'},
+  {category:'standard', name:'Дуб Сонома',           image:'textures/dub_sonoma_3025_ultradecor.jpg'},
+  {category:'standard', name:'Клён',                 image:'textures/klen_0375_ultradecor.jpg'},
+  {category:'standard', name:'Ольха классическая',        image:'textures/olkha_klassicheskaya.jpg'},
+  {category:'standard', name:'Орех Экко',            image:'textures/orekh_ekko_9459_ultradecor.jpg'},
+  {category:'standard', name:'Орех Гварнери',        image:'textures/orekh_gvarneri_9455_ultradecor.jpg'},
+  {category:'standard', name:'Орех Мария-Луиза',     image:'textures/orekh_mariya_luiza_(italyanskiy)_9490_ultradecor.jpg'},
+  {category:'standard', name:'Венге Цаво',          image:'textures/venge_tsavo_3354_ultradecor.jpg'},
+  {category:'standard', name:'Вишня Оксфорд',             image:'textures/vishnya_oksford.jpg'},
+  {category:'standard', name:'Ясень Шимо светлый',   image:'textures/yasen_shimo_svetlyy_3356_ultradecor.jpg'},
+  {category:'standard', name:'Ясень Шимо тёмный',    image:'textures/yasen_shimo_temnyy_3357_ultradecor.jpg'}
 ];
 
 let scene, camera, renderer, controls, currentModel, selectedObject;
@@ -139,11 +155,11 @@ let modelsData = [], EDGE_THRESHOLD = 0.005, NEIGHBOR_TOLERANCE = 0.00005;
 function initScene(){
   const viewport = document.getElementById('viewport');
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xe0e0e0);
+  scene.background = new THREE.Color(0xffffff);  /* белый фон */
 
   camera = new THREE.PerspectiveCamera(45, viewport.clientWidth / viewport.clientHeight, 0.01, 100000);
 
-  renderer = new THREE.WebGLRenderer({antialias:true, logarithmicDepthBuffer:true});
+  renderer = new THREE.WebGLRenderer({antialias:true, logarithmicDepthBuffer:true, preserveDrawingBuffer:true});
   renderer.setSize(viewport.clientWidth, viewport.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   viewport.appendChild(renderer.domElement);
@@ -155,20 +171,22 @@ function initScene(){
   const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
   dirLight.position.set(10, 20, 10);
   scene.add(dirLight);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.6));
-  scene.add(new THREE.GridHelper(100, 100, 0x888888, 0xcccccc));
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xffffff, 0.6));
+
+  /* Сетка — очень светлая, чтобы не бросалась в глаза на белом фоне */
+  const grid = new THREE.GridHelper(100, 100, 0xdddddd, 0xeeeeee);
+  scene.add(grid);
 
   animate();
 }
 
-/* ✅ Инициализация сцены ДО всех addEventListener, использующих renderer */
 initScene();
 
 /* === СПИСОК МОДЕЛЕЙ === */
 async function loadModelsList(){
   try{
     const response = await fetch(MODELS_URL, {cache:'no-store'});
-    if(!response.ok) throw new Error(`HTTP ${response.status} — ${MODELS_URL}`);
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     modelsData = data.models || [];
     renderModelsList(modelsData);
@@ -206,7 +224,6 @@ document.getElementById('search-input').addEventListener('input', (e) => {
   ));
 });
 
-/* === ЗАГРУЗКА МОДЕЛИ === */
 async function loadModel(model, element){
   document.querySelectorAll('.model-item').forEach(el => el.classList.remove('active'));
   if(element) element.classList.add('active');
@@ -216,8 +233,6 @@ async function loadModel(model, element){
   const modelUrl = /^https?:\/\//i.test(model.file)
     ? model.file
     : RAW_BASE + model.file;
-
-  console.log('Загружаю модель:', modelUrl);
 
   const loader = new GLTFLoader();
   loader.load(
@@ -234,7 +249,6 @@ async function loadModel(model, element){
   );
 }
 
-/* === ОБРАБОТКА МОДЕЛИ === */
 function processModel(model, modelName){
   if(currentModel){
     scene.remove(currentModel);
@@ -289,11 +303,8 @@ function processModel(model, modelName){
   camera.lookAt(center);
   controls.target.copy(center);
   controls.update();
-
-  console.log(`✅ ${modelName} — деталей: ${allMeshes.length}`);
 }
 
-/* === ПОИСК СОСЕДНИХ КРОМОК === */
 function findAdjacentEdges(object){
   const objectBox = new THREE.Box3().setFromObject(object);
   objectBox.expandByScalar(NEIGHBOR_TOLERANCE);
@@ -311,23 +322,7 @@ const textureLoader = new THREE.TextureLoader();
 
 function applyMaterial(type, value){
   if(!selectedObject){ alert('Сначала кликните по детали в 3D-сцене'); return; }
-
   const group = [selectedObject, ...findAdjacentEdges(selectedObject)];
-
-  if(type === 'reset'){
-    group.forEach(obj => {
-      const orig = originalMaterials.get(obj.uuid);
-      if(!orig) return;
-      if(Array.isArray(orig)){
-        obj.material = orig.map(m => m.clone());
-      }else{
-        obj.material = orig.clone();
-      }
-      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-      mats.forEach(m => m.needsUpdate = true);
-    });
-    return;
-  }
 
   if(type === 'color'){
     const color = new THREE.Color(value);
@@ -352,6 +347,23 @@ function applyMaterial(type, value){
       alert(`Не удалось загрузить текстуру:\n${value}`);
     });
   }
+}
+
+/* === СБРОС ВСЕЙ МОДЕЛИ === */
+function resetModel(){
+  if(!currentModel){ alert('Сначала загрузите модель'); return; }
+  allMeshes.forEach(obj => {
+    const orig = originalMaterials.get(obj.uuid);
+    if(!orig) return;
+    if(Array.isArray(orig)){
+      obj.material = orig.map(m => m.clone());
+    }else{
+      obj.material = orig.clone();
+    }
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    mats.forEach(m => m.needsUpdate = true);
+  });
+  selectedObject = null;
 }
 
 /* === КЛИК ПО СЦЕНЕ === */
@@ -380,19 +392,35 @@ renderer.domElement.addEventListener('click', (event) => {
       ? selectedObject.material
       : [selectedObject.material];
     selMats.forEach(m => { if(m.emissive) m.emissive.setHex(0x444444); });
-
-    console.log(`👉 ${selectedObject.name || 'Деталь'}, кромок рядом: ${findAdjacentEdges(selectedObject).length}`);
   }
 });
 
-/* === КНОПКИ ЦВЕТОВ / СБРОСА === */
-document.querySelectorAll('.color-btn, #reset-btn').forEach(btn => {
+/* === КНОПКИ === */
+document.querySelectorAll('.color-btn').forEach(btn => {
   btn.addEventListener('click', () => applyMaterial(btn.dataset.type, btn.dataset.value));
+});
+document.getElementById('reset-btn').addEventListener('click', resetModel);
+
+/* === СОХРАНЕНИЕ КАРТИНКИ === */
+document.getElementById('screenshot-btn').addEventListener('click', () => {
+  /* Рендерим ещё раз, чтобы гарантированно получить актуальный кадр */
+  renderer.render(scene, camera);
+  const dataUrl = renderer.domElement.toDataURL('image/png');
+
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = 'model-' + Date.now() + '.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 });
 
 /* === СПИСОК ТЕКСТУР === */
 const textureListEl = document.getElementById('texture-list');
-const categories = {fantasy:'🎨 Фантазийные', standard:'🪵 Стандартные'};
+const categories = {
+  fantasy:  'Фантазийные',
+  standard: 'Стандартные'
+};
 
 for(const [catKey, catTitle] of Object.entries(categories)){
   const items = texturesData.filter(t => t.category === catKey);
@@ -450,7 +478,6 @@ window.addEventListener('resize', () => {
   renderer.setSize(v.clientWidth, v.clientHeight);
 });
 
-/* === СТАРТ === */
 loadModelsList();
 </script>
 </body>
