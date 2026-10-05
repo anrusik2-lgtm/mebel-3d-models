@@ -45,9 +45,6 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 .texture-item:hover{background:#f0f8ff;border-color:#0044cc}
 .texture-item img{width:50px;height:50px;object-fit:cover;border-radius:4px;margin-right:10px;border:1px solid #ccc;flex-shrink:0}
 .texture-name{font-size:12px;font-weight:bold}
-.color-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.color-btn{width:100%;aspect-ratio:1;border:3px solid #fff;border-radius:8px;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,0.2)}
-.color-btn:hover{transform:scale(1.1)}
 
 .checkbox-container{margin:10px 15px;padding:12px;background:#fff8e1;border:2px solid #ffc107;border-radius:8px;cursor:pointer;user-select:none;display:flex;align-items:center;gap:10px;transition:background 0.2s;}
 .checkbox-container:hover{background:#fff3c4}
@@ -192,7 +189,7 @@ kbd {
   
   <div class="checkbox-container top-mode">
     <input type="checkbox" id="add-on-top">
-    <label for="add-on-top"> Добавить сверху на выделенную деталь (антресоль)</label>
+    <label for="add-on-top">📌 Добавить сверху на выделенную деталь (антресоль)</label>
   </div>
 
   <div class="checkbox-container">
@@ -201,7 +198,7 @@ kbd {
   </div>
   
   <button id="reset-btn">Вернуть материал</button>
-  <button id="ruler-btn"> Линейка (выкл)</button>
+  <button id="ruler-btn">📏 Линейка (выкл)</button>
   <button id="screenshot-btn">Скачать изображение</button>
 </div>
 
@@ -217,7 +214,7 @@ kbd {
       <li><strong>3.</strong> <strong>Вращайте</strong> сцену, зажав левую кнопку мыши. <strong>Приближайте</strong> колесиком.</li>
       <li><strong>4.</strong> Чтобы покрасить <strong>несколько деталей</strong> сразу, зажмите <kbd>Ctrl</kbd> (или <kbd>Cmd</kbd> на Mac) и кликайте по ним.</li>
       <li><strong>5.</strong> Кнопка «Вернуть материал» сбросит цвет выделенных деталей к исходному.</li>
-      <li><strong>6.</strong> Кнопка «📏 Линейка»: включите режим, наведите на край детали и кликните — поставится первая точка. Тяните мышь — увидите расстояние. Кликните второй раз — зафиксируете размер.</li>
+      <li><strong>6.</strong> Кнопка « Линейка»: включите режим, наведите на край детали и кликните — поставится первая точка. Тяните мышь — увидите расстояние с выносками. Кликните второй раз — зафиксируете размер.</li>
     </ul>
     <div class="modal-note">
       💡 <em>Обратите внимание: некоторые технические детали (Задняя стенка, кромки и фурнитура) защищены от изменения цвета.</em>
@@ -306,10 +303,7 @@ let nextModelId = 1;
 // Переменные для линейки
 let rulerMode = false;
 let rulerStartPoint = null;
-let rulerLine = null;
-let rulerLabel = null;
-let rulerMarker1 = null;
-let rulerMarker2 = null;
+let rulerGroup = null; // Группа для всех элементов линейки (линия, выноски, метка)
 
 function initScene(){
   const viewport = document.getElementById('viewport');
@@ -374,7 +368,7 @@ function renderModelsList(models){
           <h3 style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${model.name}</h3>
           <span class="category">${model.category||''}</span>
         </div>
-        <button class="add-model-btn" title="Добавить в сцену"></button>
+        <button class="add-model-btn" title="Добавить в сцену">➕</button>
       </div>
     `;
     
@@ -442,7 +436,12 @@ function processAndAddModel(gltf, modelName, isAppend){
       const box = new THREE.Box3().setFromObject(sm.group);
       if (box.max.x > maxX) maxX = box.max.x;
     });
-    offsetX = maxX + 50;
+    
+    // Увеличенный отступ для гарантированного разделения моделей
+    const offset = 100;
+    offsetX = maxX + offset;
+    
+    console.log('Добавление модели справа. maxX существующих:', maxX, 'новая позиция X:', offsetX);
   } else {
     offsetX = 0;
     offsetY = 0;
@@ -702,46 +701,102 @@ function resetModel(){
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
+// Создание текстовой метки
 function createTextSprite(text, position) {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
   canvas.width = 256;
   canvas.height = 64;
   
-  context.fillStyle = 'rgba(0, 68, 204, 0.9)';
+  context.fillStyle = 'rgba(0, 68, 204, 0.95)';
   context.fillRect(0, 0, 256, 64);
   
   context.fillStyle = 'white';
-  context.font = 'bold 24px Arial';
+  context.font = 'bold 28px Arial';
   context.textAlign = 'center';
   context.textBaseline = 'middle';
   context.fillText(text, 128, 32);
   
   const texture = new THREE.CanvasTexture(canvas);
-  const material = new THREE.SpriteMaterial({ map: texture });
+  const material = new THREE.SpriteMaterial({ map: texture, depthTest: false });
   const sprite = new THREE.Sprite(material);
   sprite.position.copy(position);
-  sprite.scale.set(50, 12.5, 1);
+  sprite.scale.set(60, 15, 1);
+  sprite.renderOrder = 999;
   
   return sprite;
 }
 
+// Создание маркера точки
+function createMarker(point, color) {
+  const geometry = new THREE.SphereGeometry(2, 16, 16);
+  const material = new THREE.MeshBasicMaterial({ color: color, depthTest: false });
+  const marker = new THREE.Mesh(geometry, material);
+  marker.position.copy(point);
+  marker.renderOrder = 999;
+  return marker;
+}
+
+// Создание линии с выноской (как в CAD)
+function createRulerWithExtension(startPoint, endPoint) {
+  const group = new THREE.Group();
+  
+  // Вычисляем направление от камеры к середине линии для выноски
+  const midPoint = new THREE.Vector3().addVectors(startPoint, endPoint).multiplyScalar(0.5);
+  const cameraDirection = new THREE.Vector3().subVectors(camera.position, midPoint).normalize();
+  
+  // Смещение выноски от поверхности (в сторону камеры)
+  const offsetDistance = 30;
+  const offsetVector = cameraDirection.multiplyScalar(offsetDistance);
+  
+  // Точки выноски (смещённые от поверхности)
+  const startOffset = new THREE.Vector3().addVectors(startPoint, offsetVector);
+  const endOffset = new THREE.Vector3().addVectors(endPoint, offsetVector);
+  
+  // Основная линия между выносками
+  const lineGeometry = new THREE.BufferGeometry().setFromPoints([startOffset, endOffset]);
+  const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0044cc, linewidth: 2, depthTest: false });
+  const mainLine = new THREE.Line(lineGeometry, lineMaterial);
+  mainLine.renderOrder = 999;
+  group.add(mainLine);
+  
+  // Выноски (перпендикулярные линии от точек к основной линии)
+  const extLine1Geometry = new THREE.BufferGeometry().setFromPoints([startPoint, startOffset]);
+  const extLine1 = new THREE.Line(extLine1Geometry, lineMaterial.clone());
+  extLine1.renderOrder = 999;
+  group.add(extLine1);
+  
+  const extLine2Geometry = new THREE.BufferGeometry().setFromPoints([endPoint, endOffset]);
+  const extLine2 = new THREE.Line(extLine2Geometry, lineMaterial.clone());
+  extLine2.renderOrder = 999;
+  group.add(extLine2);
+  
+  // Маркеры на концах выносок
+  const marker1 = createMarker(startOffset, 0x0044cc);
+  const marker2 = createMarker(endOffset, 0x0044cc);
+  group.add(marker1);
+  group.add(marker2);
+  
+  // Маркеры на точках измерения
+  const pointMarker1 = createMarker(startPoint, 0xff0000);
+  const pointMarker2 = createMarker(endPoint, 0xff0000);
+  group.add(pointMarker1);
+  group.add(pointMarker2);
+  
+  // Текстовая метка с расстоянием посередине основной линии
+  const distance = startPoint.distanceTo(endPoint);
+  const distanceMM = Math.round(distance);
+  const labelMidPoint = new THREE.Vector3().addVectors(startOffset, endOffset).multiplyScalar(0.5);
+  const label = createTextSprite(`${distanceMM} мм`, labelMidPoint);
+  group.add(label);
+  
+  return group;
+}
+
 function clearRuler() {
-  if (rulerLine) {
-    scene.remove(rulerLine);
-    rulerLine = null;
-  }
-  if (rulerLabel) {
-    scene.remove(rulerLabel);
-    rulerLabel = null;
-  }
-  if (rulerMarker1) {
-    scene.remove(rulerMarker1);
-    rulerMarker1 = null;
-  }
-  if (rulerMarker2) {
-    scene.remove(rulerMarker2);
-    rulerMarker2 = null;
+  if (rulerGroup) {
+    scene.remove(rulerGroup);
+    rulerGroup = null;
   }
   rulerStartPoint = null;
 }
@@ -766,33 +821,16 @@ renderer.domElement.addEventListener('click', (event) => {
         // Первый клик - ставим начальную точку
         rulerStartPoint = point.clone();
         
-        const markerGeometry = new THREE.SphereGeometry(2, 16, 16);
-        const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        rulerMarker1 = new THREE.Mesh(markerGeometry, markerMaterial);
-        rulerMarker1.position.copy(point);
-        scene.add(rulerMarker1);
-        
       } else {
         // Второй клик - ставим конечную точку и показываем результат
         const endPoint = point.clone();
         
-        const markerGeometry = new THREE.SphereGeometry(2, 16, 16);
-        const markerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        rulerMarker2 = new THREE.Mesh(markerGeometry, markerMaterial);
-        rulerMarker2.position.copy(endPoint);
-        scene.add(rulerMarker2);
-        
-        const lineGeometry = new THREE.BufferGeometry().setFromPoints([rulerStartPoint, endPoint]);
-        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0044cc, linewidth: 3 });
-        rulerLine = new THREE.Line(lineGeometry, lineMaterial);
-        scene.add(rulerLine);
+        // Создаём линейку с выноской
+        rulerGroup = createRulerWithExtension(rulerStartPoint, endPoint);
+        scene.add(rulerGroup);
         
         const distance = rulerStartPoint.distanceTo(endPoint);
         const distanceMM = Math.round(distance);
-        
-        const midPoint = new THREE.Vector3().addVectors(rulerStartPoint, endPoint).multiplyScalar(0.5);
-        rulerLabel = createTextSprite(`${distanceMM} мм`, midPoint);
-        scene.add(rulerLabel);
         
         alert(`Расстояние: ${distanceMM} мм`);
         
@@ -843,27 +881,14 @@ renderer.domElement.addEventListener('mousemove', (event) => {
   if (intersects.length > 0) {
     const currentPoint = intersects[0].point;
     
-    // Удаляем старую линию и метку
-    if (rulerLine) {
-      scene.remove(rulerLine);
-    }
-    if (rulerLabel) {
-      scene.remove(rulerLabel);
+    // Удаляем старую линейку
+    if (rulerGroup) {
+      scene.remove(rulerGroup);
     }
     
-    // Рисуем временную линию
-    const lineGeometry = new THREE.BufferGeometry().setFromPoints([rulerStartPoint, currentPoint]);
-    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0044cc, linewidth: 2 });
-    rulerLine = new THREE.Line(lineGeometry, lineMaterial);
-    scene.add(rulerLine);
-    
-    // Показываем расстояние
-    const distance = rulerStartPoint.distanceTo(currentPoint);
-    const distanceMM = Math.round(distance);
-    
-    const midPoint = new THREE.Vector3().addVectors(rulerStartPoint, currentPoint).multiplyScalar(0.5);
-    rulerLabel = createTextSprite(`${distanceMM} мм`, midPoint);
-    scene.add(rulerLabel);
+    // Рисуем временную линейку с выноской
+    rulerGroup = createRulerWithExtension(rulerStartPoint, currentPoint);
+    scene.add(rulerGroup);
   }
 });
 
@@ -874,12 +899,12 @@ rulerBtn.addEventListener('click', () => {
   rulerMode = !rulerMode;
   
   if (rulerMode) {
-    rulerBtn.textContent = '📏 Линейка (вкл)';
+    rulerBtn.textContent = ' Линейка (вкл)';
     rulerBtn.classList.add('active');
     controls.enabled = false;
     alert('Режим линейки включён. Кликните на первую точку, затем тяните мышь и кликните на вторую точку.');
   } else {
-    rulerBtn.textContent = '📏 Линейка (выкл)';
+    rulerBtn.textContent = ' Линейка (выкл)';
     rulerBtn.classList.remove('active');
     controls.enabled = true;
     clearRuler();
