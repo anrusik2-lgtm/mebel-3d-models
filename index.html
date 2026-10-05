@@ -330,6 +330,28 @@ function processModel(model, modelName){
     }
   });
 
+    // === НОВЫЙ КОД: вывод структуры модели ===
+  console.log('=== СТРУКТУРА МОДЕЛИ ===');
+  console.log(`Всего мешей: ${allMeshes.length}`);
+  allMeshes.forEach((mesh, idx) => {
+    const meshBox = new THREE.Box3().setFromObject(mesh);
+    const meshSize = meshBox.getSize(new THREE.Vector3());
+    const meshCenter = meshBox.getCenter(new THREE.Vector3());
+    console.log(`[${idx}] Имя: "${mesh.name}" | Размер: ${meshSize.x.toFixed(3)}x${meshSize.y.toFixed(3)}x${meshSize.z.toFixed(3)} | Центр: ${meshCenter.x.toFixed(3)}, ${meshCenter.y.toFixed(3)}, ${meshCenter.z.toFixed(3)}`);
+  });
+  console.log('=== КОНЕЦ СТРУКТУРЫ ===');
+  // === КОНЕЦ НОВОГО КОДА ===
+
+  const center = box.getCenter(new THREE.Vector3());
+  const fov = camera.fov * (Math.PI / 180);
+  const cameraZ = (maxDim / 2) / Math.tan(fov / 2) * 1.8;
+
+  camera.position.set(center.x, center.y + size.y * 0.2, center.z - cameraZ);
+  camera.lookAt(center);
+  controls.target.copy(center);
+  controls.update();
+}
+
   const center = box.getCenter(new THREE.Vector3());
   const fov = camera.fov * (Math.PI / 180);
   const cameraZ = (maxDim / 2) / Math.tan(fov / 2) * 1.8;
