@@ -67,7 +67,6 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 #screenshot-btn{margin:0 15px 15px 15px;padding:12px;background:#e3f2fd;border:2px solid #0044cc;color:#0044cc;border-radius:8px;cursor:pointer;font-weight:bold;font-size:14px}
 #screenshot-btn:hover{background:#c8e3fc}
 
-/* Кнопка линейки */
 #ruler-btn{margin:0 15px 15px 15px;padding:12px;background:#f0f0f0;border:2px solid #999;color:#333;border-radius:8px;cursor:pointer;font-weight:bold;font-size:14px;transition:0.2s}
 #ruler-btn:hover{background:#e0e0e0}
 #ruler-btn.active{background:#0044cc;color:white;border-color:#003399}
@@ -193,7 +192,7 @@ kbd {
   
   <div class="checkbox-container top-mode">
     <input type="checkbox" id="add-on-top">
-    <label for="add-on-top">📌 Добавить сверху на выделенную деталь (антресоль)</label>
+    <label for="add-on-top"> Добавить сверху на выделенную деталь (антресоль)</label>
   </div>
 
   <div class="checkbox-container">
@@ -202,7 +201,7 @@ kbd {
   </div>
   
   <button id="reset-btn">Вернуть материал</button>
-  <button id="ruler-btn">📏 Линейка (выкл)</button>
+  <button id="ruler-btn"> Линейка (выкл)</button>
   <button id="screenshot-btn">Скачать изображение</button>
 </div>
 
@@ -218,7 +217,7 @@ kbd {
       <li><strong>3.</strong> <strong>Вращайте</strong> сцену, зажав левую кнопку мыши. <strong>Приближайте</strong> колесиком.</li>
       <li><strong>4.</strong> Чтобы покрасить <strong>несколько деталей</strong> сразу, зажмите <kbd>Ctrl</kbd> (или <kbd>Cmd</kbd> на Mac) и кликайте по ним.</li>
       <li><strong>5.</strong> Кнопка «Вернуть материал» сбросит цвет выделенных деталей к исходному.</li>
-      <li><strong>6.</strong> Кнопка «📏 Линейка» позволяет измерить расстояние между двумя точками. Включите режим, кликните на первую точку, затем на вторую — увидите расстояние в мм.</li>
+      <li><strong>6.</strong> Кнопка «📏 Линейка»: включите режим, наведите на край детали и кликните — поставится первая точка. Тяните мышь — увидите расстояние. Кликните второй раз — зафиксируете размер.</li>
     </ul>
     <div class="modal-note">
       💡 <em>Обратите внимание: некоторые технические детали (Задняя стенка, кромки и фурнитура) защищены от изменения цвета.</em>
@@ -306,9 +305,11 @@ let nextModelId = 1;
 
 // Переменные для линейки
 let rulerMode = false;
-let rulerPoints = [];
+let rulerStartPoint = null;
 let rulerLine = null;
 let rulerLabel = null;
+let rulerMarker1 = null;
+let rulerMarker2 = null;
 
 function initScene(){
   const viewport = document.getElementById('viewport');
@@ -373,7 +374,7 @@ function renderModelsList(models){
           <h3 style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${model.name}</h3>
           <span class="category">${model.category||''}</span>
         </div>
-        <button class="add-model-btn" title="Добавить в сцену">➕</button>
+        <button class="add-model-btn" title="Добавить в сцену"></button>
       </div>
     `;
     
@@ -402,7 +403,9 @@ document.getElementById('search-input').addEventListener('input', (e) => {
 function processAndAddModel(gltf, modelName, isAppend){
   const group = gltf.scene;
   
-  // ИСПРАВЛЕНИЕ: принудительно обновляем матрицы перед вычислением bounding box
+  // ИСПРАВЛЕНИЕ: Сначала добавляем модель в сцену с позицией (0,0,0) для корректного вычисления bounding box
+  group.position.set(0, 0, 0);
+  scene.add(group);
   group.updateMatrixWorld(true);
   
   let offsetX = 0, offsetY = 0, offsetZ = 0;
@@ -431,7 +434,7 @@ function processAndAddModel(gltf, modelName, isAppend){
     offsetZ = sceneCenter.z - newCenter.z;
     
   } else if (sceneModels.length > 0) {
-    // ИСПРАВЛЕНИЕ: обновляем матрицы всех существующих моделей
+    // ИСПРАВЛЕНИЕ: Вычисляем правую границу всех существующих моделей
     sceneModels.forEach(sm => sm.group.updateMatrixWorld(true));
     
     let maxX = -Infinity;
@@ -446,8 +449,9 @@ function processAndAddModel(gltf, modelName, isAppend){
     offsetZ = 0;
   }
 
+  // Устанавливаем финальную позицию
   group.position.set(offsetX, offsetY, offsetZ);
-  scene.add(group);
+  group.updateMatrixWorld(true);
   
   const modelEntry = {
     id: nextModelId++,
@@ -698,7 +702,6 @@ function resetModel(){
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-// Функция для создания текстовой метки
 function createTextSprite(text, position) {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
@@ -723,6 +726,26 @@ function createTextSprite(text, position) {
   return sprite;
 }
 
+function clearRuler() {
+  if (rulerLine) {
+    scene.remove(rulerLine);
+    rulerLine = null;
+  }
+  if (rulerLabel) {
+    scene.remove(rulerLabel);
+    rulerLabel = null;
+  }
+  if (rulerMarker1) {
+    scene.remove(rulerMarker1);
+    rulerMarker1 = null;
+  }
+  if (rulerMarker2) {
+    scene.remove(rulerMarker2);
+    rulerMarker2 = null;
+  }
+  rulerStartPoint = null;
+}
+
 renderer.domElement.addEventListener('click', (event) => {
   if(sceneModels.length === 0) return;
 
@@ -738,35 +761,42 @@ renderer.domElement.addEventListener('click', (event) => {
     
     if (intersects.length > 0) {
       const point = intersects[0].point;
-      rulerPoints.push(point.clone());
       
-      // Создаём маркер точки
-      const markerGeometry = new THREE.SphereGeometry(2, 16, 16);
-      const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-      const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-      marker.position.copy(point);
-      scene.add(marker);
-      
-      if (rulerPoints.length === 2) {
-        // Рисуем линию
-        const lineGeometry = new THREE.BufferGeometry().setFromPoints(rulerPoints);
+      if (!rulerStartPoint) {
+        // Первый клик - ставим начальную точку
+        rulerStartPoint = point.clone();
+        
+        const markerGeometry = new THREE.SphereGeometry(2, 16, 16);
+        const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        rulerMarker1 = new THREE.Mesh(markerGeometry, markerMaterial);
+        rulerMarker1.position.copy(point);
+        scene.add(rulerMarker1);
+        
+      } else {
+        // Второй клик - ставим конечную точку и показываем результат
+        const endPoint = point.clone();
+        
+        const markerGeometry = new THREE.SphereGeometry(2, 16, 16);
+        const markerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        rulerMarker2 = new THREE.Mesh(markerGeometry, markerMaterial);
+        rulerMarker2.position.copy(endPoint);
+        scene.add(rulerMarker2);
+        
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints([rulerStartPoint, endPoint]);
         const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0044cc, linewidth: 3 });
         rulerLine = new THREE.Line(lineGeometry, lineMaterial);
         scene.add(rulerLine);
         
-        // Вычисляем расстояние
-        const distance = rulerPoints[0].distanceTo(rulerPoints[1]);
-        const distanceMM = Math.round(distance); // В миллиметрах (если 1 единица = 1 мм)
+        const distance = rulerStartPoint.distanceTo(endPoint);
+        const distanceMM = Math.round(distance);
         
-        // Создаём метку с расстоянием посередине
-        const midPoint = new THREE.Vector3().addVectors(rulerPoints[0], rulerPoints[1]).multiplyScalar(0.5);
+        const midPoint = new THREE.Vector3().addVectors(rulerStartPoint, endPoint).multiplyScalar(0.5);
         rulerLabel = createTextSprite(`${distanceMM} мм`, midPoint);
         scene.add(rulerLabel);
         
-        // Сбрасываем точки для нового измерения
-        rulerPoints = [];
-        
         alert(`Расстояние: ${distanceMM} мм`);
+        
+        rulerStartPoint = null;
       }
     }
     return;
@@ -799,9 +829,46 @@ renderer.domElement.addEventListener('click', (event) => {
   }
 });
 
+// Движение мыши для линейки
+renderer.domElement.addEventListener('mousemove', (event) => {
+  if (!rulerMode || !rulerStartPoint) return;
+  
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(allMeshes, true);
+  
+  if (intersects.length > 0) {
+    const currentPoint = intersects[0].point;
+    
+    // Удаляем старую линию и метку
+    if (rulerLine) {
+      scene.remove(rulerLine);
+    }
+    if (rulerLabel) {
+      scene.remove(rulerLabel);
+    }
+    
+    // Рисуем временную линию
+    const lineGeometry = new THREE.BufferGeometry().setFromPoints([rulerStartPoint, currentPoint]);
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0044cc, linewidth: 2 });
+    rulerLine = new THREE.Line(lineGeometry, lineMaterial);
+    scene.add(rulerLine);
+    
+    // Показываем расстояние
+    const distance = rulerStartPoint.distanceTo(currentPoint);
+    const distanceMM = Math.round(distance);
+    
+    const midPoint = new THREE.Vector3().addVectors(rulerStartPoint, currentPoint).multiplyScalar(0.5);
+    rulerLabel = createTextSprite(`${distanceMM} мм`, midPoint);
+    scene.add(rulerLabel);
+  }
+});
+
 document.getElementById('reset-btn').addEventListener('click', resetModel);
 
-// Кнопка линейки
 const rulerBtn = document.getElementById('ruler-btn');
 rulerBtn.addEventListener('click', () => {
   rulerMode = !rulerMode;
@@ -809,23 +876,13 @@ rulerBtn.addEventListener('click', () => {
   if (rulerMode) {
     rulerBtn.textContent = '📏 Линейка (вкл)';
     rulerBtn.classList.add('active');
-    controls.enabled = false; // Отключаем вращение камеры
-    alert('Режим линейки включён. Кликните на первую точку, затем на вторую.');
+    controls.enabled = false;
+    alert('Режим линейки включён. Кликните на первую точку, затем тяните мышь и кликните на вторую точку.');
   } else {
     rulerBtn.textContent = '📏 Линейка (выкл)';
     rulerBtn.classList.remove('active');
-    controls.enabled = true; // Включаем вращение камеры
-    
-    // Удаляем линию и метку
-    if (rulerLine) {
-      scene.remove(rulerLine);
-      rulerLine = null;
-    }
-    if (rulerLabel) {
-      scene.remove(rulerLabel);
-      rulerLabel = null;
-    }
-    rulerPoints = [];
+    controls.enabled = true;
+    clearRuler();
   }
 });
 
