@@ -37,7 +37,6 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 .color-btn{width:100%;aspect-ratio:1;border:3px solid #fff;border-radius:8px;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,0.2)}
 .color-btn:hover{transform:scale(1.1)}
 
-/* === СТИЛИ ДЛЯ ГАЛОЧКИ === */
 .checkbox-container{
   margin:10px 15px;padding:12px;background:#fff8e1;
   border:2px solid #ffc107;border-radius:8px;
@@ -99,7 +98,6 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
   <div id="fantasy" class="tab-content"><div id="fantasy-list"></div></div>
   <div id="paint" class="tab-content"><div id="paint-list"></div></div>
   
-  <!-- === НОВАЯ ГАЛОЧКА === -->
   <div class="checkbox-container">
     <input type="checkbox" id="apply-to-all">
     <label for="apply-to-all">Заменить весь цвет изделия</label>
@@ -119,7 +117,6 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const MODELS_URL = 'models/models.json';
 const RAW_BASE = 'models/';
 
-/* === СТАНДАРТНЫЕ ЦВЕТА ЛДСП === */
 const standardTextures = [
   {name:'Белый',                image:'textures/belyy_6459_ultradecor.jpg'},
   {name:'Берёза',               image:'textures/bereza_1715_ultradecor.jpg'},
@@ -143,7 +140,6 @@ const standardTextures = [
   {name:'Ясень Шимо тёмный',    image:'textures/yasen_shimo_temnyy_3357_ultradecor.jpg'},
 ];
 
-/* === ФАНТАЗИЙНЫЕ ЦВЕТА ЛДСП === */
 const fantasyTextures = [
   {name:'Лимонный сорбет',      image:'textures/limonnyy_sorbet_7123_ultradecor.jpg'},
   {name:'Песочный',             image:'textures/pesochnyy_0515_ultradecor.jpg'},
@@ -165,7 +161,6 @@ const fantasyTextures = [
   {name:'Аура',              image:'textures/aura_lamarty.jpg'},
 ];
 
-/* === ЦВЕТ ПОКРАСКИ ФАНЕРЫ === */
 const paintTextures = [
   {name:'Серый',             image:'textures/S168.jpg'},
   {name:'Бежевый',           image:'textures/G100.jpg'},
@@ -187,7 +182,6 @@ let scene, camera, renderer, controls, currentModel, selectedObject;
 let allMeshes = [], edgeObjects = new Set(), originalMaterials = new Map();
 let modelsData = [], EDGE_THRESHOLD = 0.005, NEIGHBOR_TOLERANCE = 0.00005;
 
-/* === СЦЕНА === */
 function initScene(){
   const viewport = document.getElementById('viewport');
   scene = new THREE.Scene();
@@ -203,21 +197,17 @@ function initScene(){
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // Фоновый свет
   scene.add(new THREE.AmbientLight(0xffffff, 1.1));
 
-  // Основной свет сверху-сбоку
   const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
   dirLight.position.set(10, 20, 10);
   scene.add(dirLight);
 
-  // === СВЕТ ПРЯМО СПЕРЕДИ, привязан к камере ===
-  scene.add(camera); // камера становится частью сцены
+  scene.add(camera);
   const cameraLight = new THREE.DirectionalLight(0xffffff, 1.2);
-  cameraLight.position.set(0, 0, 10); // стоит перед камерой и светит вдоль её взгляда
+  cameraLight.position.set(0, 0, 10);
   camera.add(cameraLight);
 
-  // Мягкий рассеянный свет
   scene.add(new THREE.HemisphereLight(0xffffff, 0xffffff, 0.7));
 
   const grid = new THREE.GridHelper(100, 100, 0xdddddd, 0xeeeeee);
@@ -228,7 +218,6 @@ function initScene(){
 
 initScene();
 
-/* === СПИСОК МОДЕЛЕЙ === */
 async function loadModelsList(){
   try{
     const response = await fetch(MODELS_URL, {cache:'no-store'});
@@ -363,23 +352,19 @@ function findAdjacentEdges(object){
   return adjacent;
 }
 
-/* === МАТЕРИАЛЫ (С УЧЁТОМ ГАЛОЧКИ) === */
 const textureLoader = new THREE.TextureLoader();
 
 function applyMaterial(value){
-  // Проверяем галочку "Заменить весь цвет изделия"
   const applyToAll = document.getElementById('apply-to-all').checked;
   
   let group;
   if(applyToAll){
-    // Применяем ко ВСЕМ деталям модели
     if(!currentModel || allMeshes.length === 0){
       alert('Сначала загрузите модель');
       return;
     }
     group = allMeshes;
   }else{
-    // Применяем только к выбранной детали + кромкам
     if(!selectedObject){
       alert('Сначала кликните по детали в 3D-сцене');
       return;
@@ -390,7 +375,13 @@ function applyMaterial(value){
   textureLoader.load(value, (tex) => {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    
     group.forEach(obj => {
+      // Пропускаем детали, имя которых заканчивается на _NON
+      if (obj.name && obj.name.endsWith('_NON')) {
+        return;
+      }
+
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       mats.forEach(m => {
         m.map = tex;
@@ -404,7 +395,6 @@ function applyMaterial(value){
   });
 }
 
-/* === СБРОС ВСЕЙ МОДЕЛИ === */
 function resetModel(){
   if(!currentModel){ alert('Сначала загрузите модель'); return; }
   allMeshes.forEach(obj => {
@@ -421,7 +411,6 @@ function resetModel(){
   selectedObject = null;
 }
 
-/* === КЛИК ПО СЦЕНЕ === */
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
@@ -450,7 +439,6 @@ renderer.domElement.addEventListener('click', (event) => {
   }
 });
 
-/* === КНОПКИ === */
 document.getElementById('reset-btn').addEventListener('click', resetModel);
 
 document.getElementById('screenshot-btn').addEventListener('click', () => {
@@ -464,7 +452,6 @@ document.getElementById('screenshot-btn').addEventListener('click', () => {
   document.body.removeChild(a);
 });
 
-/* === ОТРИСОВКА СПИСКОВ ТЕКСТУР === */
 function renderTextureList(containerId, items){
   const container = document.getElementById(containerId);
   container.innerHTML = '';
@@ -481,7 +468,6 @@ renderTextureList('standard-list', standardTextures);
 renderTextureList('fantasy-list', fantasyTextures);
 renderTextureList('paint-list', paintTextures);
 
-/* === ЗАГРУЗКА === */
 function showLoading(text){
   document.getElementById('loading-text').innerText = text;
   document.getElementById('loading').classList.add('show');
@@ -490,7 +476,6 @@ function hideLoading(){
   document.getElementById('loading').classList.remove('show');
 }
 
-/* === ТАБЫ === */
 function switchTab(activeId, contentId){
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -501,7 +486,6 @@ document.getElementById('tab-standard').addEventListener('click', () => switchTa
 document.getElementById('tab-fantasy').addEventListener('click', () => switchTab('tab-fantasy', 'fantasy'));
 document.getElementById('tab-paint').addEventListener('click', () => switchTab('tab-paint', 'paint'));
 
-/* === АНИМАЦИЯ === */
 function animate(){
   requestAnimationFrame(animate);
   controls.update();
