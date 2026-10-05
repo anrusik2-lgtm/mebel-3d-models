@@ -179,8 +179,8 @@ const paintTextures = [
 ];
 
 let scene, camera, renderer, controls, currentModel, selectedObject;
-let allMeshes = [], originalMaterials = new Map();
-let modelsData = [];
+let allMeshes = [], edgeObjects = new Set(), originalMaterials = new Map();
+let modelsData = [], EDGE_THRESHOLD = 0.005, NEIGHBOR_TOLERANCE = 0.00005;
 
 function initScene(){
   const viewport = document.getElementById('viewport');
@@ -293,12 +293,16 @@ function processModel(model, modelName){
   currentModel = model;
   scene.add(model);
   allMeshes = [];
+  edgeObjects.clear();
   originalMaterials.clear();
   selectedObject = null;
 
   const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z);
+
+  EDGE_THRESHOLD     = maxDim > 100 ? 2.0    : 0.002;
+  NEIGHBOR_TOLERANCE = maxDim > 100 ? 0.05   : 0.00005;
 
   model.traverse((child) => {
     if(child.isMesh){
@@ -311,6 +315,10 @@ function processModel(model, modelName){
         child.material = child.material.clone();
         originalMaterials.set(child.uuid, child.material.clone());
       }
+
+      const childSize = new THREE.Box3().setFromObject(child).getSize(new THREE.Vector3());
+      const minSide = Math.min(childSize.x, childSize.y, childSize.z);
+      if(minSide < EDGE_THRESHOLD && minSide > 0) edgeObjects.add(child);
 
       const mats = Array.isArray(child.material) ? child.material : [child.material];
       mats.forEach(mat => {
@@ -332,30 +340,16 @@ function processModel(model, modelName){
   controls.update();
 }
 
-// === НОВАЯ УМНАЯ ФУНКЦИЯ ПОИСКА СОСЕДНИХ ДЕТАЛЕЙ ===
-function findConnectedParts(object) {
+function findAdjacentEdges(object){
   const objectBox = new THREE.Box3().setFromObject(object);
-  // Расширяем границы на 2 единицы, чтобы гарантированно захватить соприкасающиеся детали (радиусы, кромки)
-  objectBox.expandByScalar(2.0);
-
-  const connected = [];
-  const objCenter = objectBox.getCenter(new THREE.Vector3());
-
-  allMeshes.forEach(mesh => {
-    if (mesh === object) return; // Саму деталь уже добавим отдельно
-
-    const meshBox = new THREE.Box3().setFromObject(mesh);
-    // Если границы пересекаются
-    if (objectBox.intersectsBox(meshBox)) {
-      const meshCenter = meshBox.getCenter(new THREE.Vector3());
-      // Проверяем, что детали находятся примерно на одной высоте (разница по Y не более 20 единиц)
-      // Это предотвратит случайное выделение ножек или других деталей, находящихся под столешницей
-      if (Math.abs(objCenter.y - meshCenter.y) < 20) {
-        connected.push(mesh);
-      }
+  objectBox.expandByScalar(NEIGHBOR_TOLERANCE);
+  const adjacent = [];
+  edgeObjects.forEach(edge => {
+    if(edge !== object && objectBox.intersectsBox(new THREE.Box3().setFromObject(edge))){
+      adjacent.push(edge);
     }
   });
-  return connected;
+  return adjacent;
 }
 
 const textureLoader = new THREE.TextureLoader();
@@ -375,8 +369,7 @@ function applyMaterial(value){
       alert('Сначала кликните по детали в 3D-сцене');
       return;
     }
-    // Используем новую функцию: выбранная деталь + все соприкасающиеся части (радиусы)
-    group = [selectedObject, ...findConnectedParts(selectedObject)];
+    group = [selectedObject, ...findAdjacentEdges(selectedObject)];
   }
 
   textureLoader.load(value, (tex) => {
