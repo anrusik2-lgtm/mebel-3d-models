@@ -7,91 +7,83 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
-#sidebar{position:absolute;left:0;top:0;width:320px;height:100vh;background:white;box-shadow:2px 0 10px rgba(0,0,0,0.1);display:flex;flex-direction:column;z-index:100}
-#sidebar-header{padding:15px 20px;background:#0044cc;color:white; display:flex; justify-content:space-between; align-items:center;}
-#sidebar-header h1{font-size:16px;font-weight:bold}
-#help-btn{background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.5); color:white; width:32px; height:32px; border-radius:50%; font-size:18px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;}
+#sidebar{position:absolute;left:0;top:0;width:250px;height:100vh;background:white;box-shadow:2px 0 10px rgba(0,0,0,0.1);display:flex;flex-direction:column;z-index:100}
+#sidebar-header{padding:12px 15px;background:#0044cc;color:white; display:flex; justify-content:space-between; align-items:center;}
+#sidebar-header h1{font-size:14px;font-weight:bold}
+#help-btn{background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.5); color:white; width:28px; height:28px; border-radius:50%; font-size:16px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;}
 #help-btn:hover{background:white; color:#0044cc;}
 
-#search-box{padding:15px;border-bottom:1px solid #ddd}
-#search-input{width:100%;padding:12px;border:2px solid #ddd;border-radius:8px;font-size:14px}
-#model-list{flex:1;overflow-y:auto;padding:10px}
-.model-item{padding:15px;margin-bottom:10px;background:#f8f9fa;border-radius:8px;cursor:pointer;border:2px solid transparent}
+#search-box{padding:10px 15px;border-bottom:1px solid #ddd}
+#search-input{width:100%;padding:10px;border:2px solid #ddd;border-radius:6px;font-size:13px}
+#model-list{flex:1;overflow-y:auto;padding:8px}
+.model-item{padding:10px;margin-bottom:8px;background:#f8f9fa;border-radius:6px;cursor:pointer;border:2px solid transparent}
 .model-item:hover{background:#e3f2fd;border-color:#0044cc}
 .model-item.active{background:#0044cc;color:white}
-.model-item h3{font-size:14px;margin-bottom:5px}
-.model-item .category{font-size:11px;color:#666;display:inline-block;background:#ddd;padding:2px 8px;border-radius:4px}
-.model-item.active .category{background:rgba(255,255,255,0.3);color:white}
+.model-item h3{font-size:12px;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-.add-model-btn {
-  background: #0044cc; color: white; border: none; border-radius: 4px;
-  padding: 6px 10px; cursor: pointer; font-weight: bold; font-size: 16px; line-height: 1;
-  transition: background 0.2s; flex-shrink: 0; margin-left: 10px;
+.model-buttons{display:flex;gap:5px}
+.add-model-btn, .add-top-btn {
+  flex:1; color: white; border: none; border-radius: 4px;
+  padding: 5px 8px; cursor: pointer; font-weight: bold; font-size: 14px; line-height: 1;
+  transition: background 0.2s;
 }
+.add-model-btn { background: #0044cc; }
 .add-model-btn:hover { background: #003399; }
+.add-top-btn { background: #28a745; }
+.add-top-btn:hover { background: #218838; }
 
-#main-area{position:absolute;left:320px;right:300px;top:0;bottom:0;background:#ffffff}
+#main-area{position:absolute;left:250px;right:250px;top:0;bottom:0;background:#ffffff}
 #viewport{width:100%;height:100%}
 
-#settings-panel{position:absolute;right:0;top:0;width:300px;height:100vh;background:white;box-shadow:-2px 0 10px rgba(0,0,0,0.1);display:flex;flex-direction:column;z-index:100}
+#settings-panel{position:absolute;right:0;top:0;width:250px;height:100vh;background:white;box-shadow:-2px 0 10px rgba(0,0,0,0.1);display:flex;flex-direction:column;z-index:100}
 .tabs{display:flex;border-bottom:2px solid #ddd;flex-wrap:wrap}
-.tab{flex:1 1 33%;padding:10px 5px;text-align:center;cursor:pointer;font-weight:bold;color:#666;font-size:11px;line-height:1.2;border-bottom:3px solid transparent}
+.tab{flex:1 1 33%;padding:8px 5px;text-align:center;cursor:pointer;font-weight:bold;color:#666;font-size:10px;line-height:1.2;border-bottom:3px solid transparent}
 .tab.active{color:#0044cc;border-bottom-color:#0044cc}
-.tab-content{display:none;flex:1;overflow-y:auto;padding:15px}
+.tab-content{display:none;flex:1;overflow-y:auto;padding:10px}
 .tab-content.active{display:block}
-.category-title{font-weight:bold;margin:15px 0 10px 0;color:#333;border-bottom:2px solid #ddd;padding-bottom:5px;font-size:12px;letter-spacing:0.5px}
-.category-title:first-child{margin-top:0}
-.texture-item{display:flex;align-items:center;margin-bottom:8px;padding:6px;border:1px solid #eee;border-radius:6px;cursor:pointer;transition:background 0.15s}
+.texture-item{display:flex;align-items:center;margin-bottom:6px;padding:5px;border:1px solid #eee;border-radius:4px;cursor:pointer;transition:background 0.15s}
 .texture-item:hover{background:#f0f8ff;border-color:#0044cc}
-.texture-item img{width:50px;height:50px;object-fit:cover;border-radius:4px;margin-right:10px;border:1px solid #ccc;flex-shrink:0}
-.texture-name{font-size:12px;font-weight:bold}
+.texture-item img{width:40px;height:40px;object-fit:cover;border-radius:3px;margin-right:8px;border:1px solid #ccc;flex-shrink:0}
+.texture-name{font-size:11px;font-weight:bold}
 
-.checkbox-container{margin:10px 15px;padding:12px;background:#fff8e1;border:2px solid #ffc107;border-radius:8px;cursor:pointer;user-select:none;display:flex;align-items:center;gap:10px;transition:background 0.2s;}
+.checkbox-container{margin:8px 10px;padding:10px;background:#fff8e1;border:2px solid #ffc107;border-radius:6px;cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px;transition:background 0.2s;}
 .checkbox-container:hover{background:#fff3c4}
-.checkbox-container input[type="checkbox"]{width:20px;height:20px;cursor:pointer;flex-shrink:0;accent-color:#0044cc;}
-.checkbox-container label{cursor:pointer;font-size:13px;font-weight:bold;color:#333;line-height:1.3;}
+.checkbox-container input[type="checkbox"]{width:18px;height:18px;cursor:pointer;flex-shrink:0;accent-color:#0044cc;}
+.checkbox-container label{cursor:pointer;font-size:12px;font-weight:bold;color:#333;line-height:1.3;}
 
-.checkbox-container.top-mode {
-  background: #e3f2fd;
-  border-color: #0044cc;
-}
-.checkbox-container.top-mode:hover {
-  background: #c8e3fc;
-}
-
-#reset-btn{margin:15px;padding:12px;background:#f5deb3;border:2px solid #d4a76a;border-radius:8px;cursor:pointer;font-weight:bold;font-size:14px}
+#reset-btn{margin:10px;padding:10px;background:#f5deb3;border:2px solid #d4a76a;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px}
 #reset-btn:hover{background:#f0d59a}
-#screenshot-btn{margin:0 15px 15px 15px;padding:12px;background:#e3f2fd;border:2px solid #0044cc;color:#0044cc;border-radius:8px;cursor:pointer;font-weight:bold;font-size:14px}
+#screenshot-btn{margin:0 10px 10px 10px;padding:10px;background:#e3f2fd;border:2px solid #0044cc;color:#0044cc;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px}
 #screenshot-btn:hover{background:#c8e3fc}
 
-#ruler-btn{margin:0 15px 15px 15px;padding:12px;background:#f0f0f0;border:2px solid #999;color:#333;border-radius:8px;cursor:pointer;font-weight:bold;font-size:14px;transition:0.2s}
+#ruler-btn{margin:0 10px 10px 10px;padding:10px;background:#f0f0f0;border:2px solid #999;color:#333;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px;transition:0.2s}
 #ruler-btn:hover{background:#e0e0e0}
 #ruler-btn.active{background:#0044cc;color:white;border-color:#003399}
 
-#loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);color:white;padding:30px;border-radius:12px;z-index:200;display:none;text-align:center}
+#loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);color:white;padding:25px;border-radius:10px;z-index:200;display:none;text-align:center}
 #loading.show{display:block}
-.spinner{width:50px;height:50px;border:5px solid #f3f3f3;border-top:5px solid #0044cc;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 15px}
+.spinner{width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid #0044cc;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
 @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 
 #scene-list-container {
-  padding: 15px; border-top: 2px solid #ddd; background: #f8f9fa; 
-  max-height: 35vh; overflow-y: auto; flex-shrink: 0;
+  padding: 10px; border-top: 2px solid #ddd; background: #f8f9fa; 
+  max-height: 30vh; overflow-y: auto; flex-shrink: 0;
 }
 .scene-item {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 8px; background: white; border-radius: 6px; margin-bottom: 6px;
-  border: 1px solid #ddd; font-size: 13px; transition: background 0.2s;
+  padding: 6px; background: white; border-radius: 4px; margin-bottom: 4px;
+  border: 1px solid #ddd; font-size: 11px; transition: background 0.2s;
 }
 .scene-item:hover { background: #f0f8ff; }
 .scene-item button {
-  background: #ff4444; color: white; border: none; border-radius: 4px;
-  padding: 4px 8px; cursor: pointer; font-size: 12px; transition: background 0.2s;
+  background: #ff4444; color: white; border: none; border-radius: 3px;
+  padding: 3px 6px; cursor: pointer; font-size: 10px; transition: background 0.2s;
 }
 .scene-item button:hover { background: #cc0000; }
 #clear-scene-btn {
-  width: 100%; margin-top: 10px; padding: 8px; background: #f5deb3; 
-  border: 2px solid #d4a76a; border-radius: 6px; cursor: pointer; 
-  font-weight: bold; font-size: 13px; transition: 0.2s;
+  width: 100%; margin-top: 8px; padding: 6px; background: #f5deb3; 
+  border: 2px solid #d4a76a; border-radius: 4px; cursor: pointer; 
+  font-weight: bold; font-size: 11px; transition: 0.2s;
 }
 #clear-scene-btn:hover { background: #f0d59a; }
 
@@ -103,41 +95,41 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 }
 .modal-backdrop.show { display: flex; opacity: 1; }
 .modal-content {
-  background: white; padding: 30px; border-radius: 16px;
-  max-width: 600px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  background: white; padding: 25px; border-radius: 14px;
+  max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   position: relative; transform: translateY(20px); transition: transform 0.3s ease;
   max-height: 85vh; overflow-y: auto;
 }
 .modal-backdrop.show .modal-content { transform: translateY(0); }
 .modal-close {
-  position: absolute; top: 15px; right: 15px; background: none; border: none;
-  font-size: 28px; color: #999; cursor: pointer; line-height: 1; transition: 0.2s;
-  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  position: absolute; top: 12px; right: 12px; background: none; border: none;
+  font-size: 24px; color: #999; cursor: pointer; line-height: 1; transition: 0.2s;
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
 }
 .modal-close:hover { color: #0044cc; }
-.modal-content h2 { margin: 0 0 20px 0; color: #0044cc; font-size: 22px; line-height: 1.3; padding-right: 30px; }
-.instruction-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
-.instruction-list li { margin-bottom: 16px; font-size: 15px; line-height: 1.6; color: #333; display: block; }
+.modal-content h2 { margin: 0 0 15px 0; color: #0044cc; font-size: 18px; line-height: 1.3; padding-right: 25px; }
+.instruction-list { list-style: none; padding: 0; margin: 0 0 15px 0; }
+.instruction-list li { margin-bottom: 12px; font-size: 13px; line-height: 1.5; color: #333; display: block; }
 .instruction-list li strong { color: #0044cc; display: inline; }
 kbd {
-  background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px;
-  padding: 3px 8px; font-family: monospace; font-size: 13px; box-shadow: 0 2px 0 #ccc;
+  background: #f0f0f0; border: 1px solid #ccc; border-radius: 3px;
+  padding: 2px 6px; font-family: monospace; font-size: 11px; box-shadow: 0 2px 0 #ccc;
   display: inline-block; margin: 0 2px; white-space: nowrap;
 }
 .modal-note {
-  background: #e3f2fd; border-left: 4px solid #0044cc; padding: 15px;
-  border-radius: 0 8px 8px 0; font-size: 14px; color: #003399; margin-bottom: 20px; line-height: 1.5;
+  background: #e3f2fd; border-left: 4px solid #0044cc; padding: 12px;
+  border-radius: 0 6px 6px 0; font-size: 12px; color: #003399; margin-bottom: 15px; line-height: 1.4;
 }
 .modal-ok-btn {
-  width: 100%; padding: 14px; background: #0044cc; color: white; border: none;
-  border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s;
+  width: 100%; padding: 12px; background: #0044cc; color: white; border: none;
+  border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s;
 }
 .modal-ok-btn:hover { background: #003399; }
 
 @media (max-width: 600px) {
-  .modal-content { padding: 20px; width: 95%; }
-  .instruction-list li { font-size: 14px; margin-bottom: 12px; }
-  kbd { font-size: 12px; padding: 2px 6px; }
+  .modal-content { padding: 18px; width: 95%; }
+  .instruction-list li { font-size: 12px; margin-bottom: 10px; }
+  kbd { font-size: 10px; padding: 2px 5px; }
 }
 </style>
 
@@ -159,16 +151,16 @@ kbd {
   </div>
   <div id="search-box"><input type="text" id="search-input" placeholder="Поиск модели..."></div>
   <div id="model-list">
-    <div style="text-align:center;padding:40px;color:#999">
-      <div class="spinner" style="width:30px;height:30px;border-width:3px;margin:0 auto 10px"></div>
+    <div style="text-align:center;padding:30px;color:#999">
+      <div class="spinner" style="width:25px;height:25px;border-width:3px;margin:0 auto 8px"></div>
       Загрузка...
     </div>
   </div>
   
   <div id="scene-list-container">
-    <h3 style="font-size:14px; margin-bottom:10px; color:#333; display:flex; justify-content:space-between; align-items:center;">
+    <h3 style="font-size:12px; margin-bottom:8px; color:#333; display:flex; justify-content:space-between; align-items:center;">
       <span>Добавлено в сцену:</span>
-      <span id="scene-count" style="background:#0044cc; color:white; padding:2px 6px; border-radius:10px; font-size:11px;">0</span>
+      <span id="scene-count" style="background:#0044cc; color:white; padding:2px 5px; border-radius:8px; font-size:10px;">0</span>
     </h3>
     <div id="scene-list"></div>
     <button id="clear-scene-btn">Очистить сцену</button>
@@ -179,22 +171,17 @@ kbd {
 
 <div id="settings-panel">
   <div class="tabs">
-    <div class="tab active" id="tab-standard">Стандартные цвета ЛДСП</div>
-    <div class="tab" id="tab-fantasy">Фантазийные цвета ЛДСП</div>
-    <div class="tab" id="tab-paint">Цвет покраски фанеры</div>
+    <div class="tab active" id="tab-standard">Стандартные</div>
+    <div class="tab" id="tab-fantasy">Фантазийные</div>
+    <div class="tab" id="tab-paint">Покраска</div>
   </div>
   <div id="standard" class="tab-content active"><div id="standard-list"></div></div>
   <div id="fantasy" class="tab-content"><div id="fantasy-list"></div></div>
   <div id="paint" class="tab-content"><div id="paint-list"></div></div>
   
-  <div class="checkbox-container top-mode">
-    <input type="checkbox" id="add-on-top">
-    <label for="add-on-top">📌 Добавить сверху на выделенную деталь (антресоль)</label>
-  </div>
-
   <div class="checkbox-container">
     <input type="checkbox" id="apply-to-all">
-    <label for="apply-to-all">Заменить весь цвет изделия</label>
+    <label for="apply-to-all">Заменить весь цвет</label>
   </div>
   
   <button id="reset-btn">Вернуть материал</button>
@@ -209,17 +196,16 @@ kbd {
     <button class="modal-close" id="close-modal">&times;</button>
     <h2>📖 Как пользоваться конфигуратором</h2>
     <ul class="instruction-list">
-      <li><strong>1.</strong> Нажмите <strong>➕</strong> рядом с моделью, чтобы добавить её в сцену.</li>
-      <li><strong>2.</strong> Чтобы поставить модель <strong>сверху (как антресоль)</strong>: сначала кликните по детали в 3D-сцене, включите галочку «📌 Добавить сверху» в правой панели, и нажмите ➕ у новой модели.</li>
-      <li><strong>3.</strong> <strong>Вращайте</strong> сцену, зажав левую кнопку мыши. <strong>Приближайте</strong> колесиком.</li>
-      <li><strong>4.</strong> Чтобы покрасить <strong>несколько деталей</strong> сразу, зажмите <kbd>Ctrl</kbd> (или <kbd>Cmd</kbd> на Mac) и кликайте по ним.</li>
-      <li><strong>5.</strong> Кнопка «Вернуть материал» сбросит цвет выделенных деталей к исходному.</li>
-      <li><strong>6.</strong> Кнопка « Линейка»: включите режим, наведите на край детали и кликните — поставится первая точка. Тяните мышь — увидите расстояние с выносками. Кликните второй раз — зафиксируете размер.</li>
+      <li><strong>1.</strong> Нажмите <strong>➕</strong> чтобы добавить модель справа, или <strong>️</strong> чтобы поставить сверху (антресоль).</li>
+      <li><strong>2.</strong> <strong>Вращайте</strong> сцену левой кнопкой мыши. <strong>Приближайте</strong> колесиком.</li>
+      <li><strong>3.</strong> <strong>Кликните</strong> по детали для выделения, затем выберите цвет справа.</li>
+      <li><strong>4.</strong> Зажмите <kbd>Ctrl</kbd> для выделения нескольких деталей.</li>
+      <li><strong>5.</strong> <strong>Линейка</strong>: включите режим, кликните на первую точку, тяните мышь (курсор прилипает к вершинам), кликните вторую точку.</li>
     </ul>
     <div class="modal-note">
-      💡 <em>Обратите внимание: некоторые технические детали (Задняя стенка, кромки и фурнитура) защищены от изменения цвета.</em>
+      💡 <em>Технические детали (задняя стенка, кромки, фурнитура) защищены от изменения цвета.</em>
     </div>
-    <button class="modal-ok-btn" id="modal-ok">Всё понятно, спасибо!</button>
+    <button class="modal-ok-btn" id="modal-ok">Всё понятно!</button>
   </div>
 </div>
 
@@ -303,7 +289,9 @@ let nextModelId = 1;
 // Переменные для линейки
 let rulerMode = false;
 let rulerStartPoint = null;
-let rulerGroup = null; // Группа для всех элементов линейки (линия, выноски, метка)
+let rulerGroup = null;
+let snapMarker = null;
+const SNAP_DISTANCE = 15; // Радиус привязки к вершинам
 
 function initScene(){
   const viewport = document.getElementById('viewport');
@@ -363,23 +351,24 @@ function renderModelsList(models){
     const div = document.createElement('div');
     div.className = 'model-item';
     div.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div style="flex:1; min-width:0;">
-          <h3 style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${model.name}</h3>
-          <span class="category">${model.category||''}</span>
-        </div>
-        <button class="add-model-btn" title="Добавить в сцену">➕</button>
+      <h3>${model.name}</h3>
+      <div class="model-buttons">
+        <button class="add-model-btn" title="Добавить справа"></button>
+        <button class="add-top-btn" title="Добавить сверху (антресоль)">⬆️</button>
       </div>
     `;
-    
-    div.onclick = (e) => { 
-      if (e.target.classList.contains('add-model-btn')) return;
-      loadModel(model, div); 
-    };
     
     const addBtn = div.querySelector('.add-model-btn');
     addBtn.onclick = (e) => { 
       e.stopPropagation(); 
+      document.getElementById('add-on-top').checked = false;
+      addModelToScene(model, div); 
+    };
+    
+    const addTopBtn = div.querySelector('.add-top-btn');
+    addTopBtn.onclick = (e) => { 
+      e.stopPropagation(); 
+      document.getElementById('add-on-top').checked = true;
       addModelToScene(model, div); 
     };
     
@@ -397,7 +386,7 @@ document.getElementById('search-input').addEventListener('input', (e) => {
 function processAndAddModel(gltf, modelName, isAppend){
   const group = gltf.scene;
   
-  // ИСПРАВЛЕНИЕ: Сначала добавляем модель в сцену с позицией (0,0,0) для корректного вычисления bounding box
+  // Сначала добавляем модель в сцену с позицией (0,0,0) для корректного вычисления bounding box
   group.position.set(0, 0, 0);
   scene.add(group);
   group.updateMatrixWorld(true);
@@ -428,7 +417,7 @@ function processAndAddModel(gltf, modelName, isAppend){
     offsetZ = sceneCenter.z - newCenter.z;
     
   } else if (sceneModels.length > 0) {
-    // ИСПРАВЛЕНИЕ: Вычисляем правую границу всех существующих моделей
+    // Вычисляем правую границу всех существующих моделей
     sceneModels.forEach(sm => sm.group.updateMatrixWorld(true));
     
     let maxX = -Infinity;
@@ -437,11 +426,14 @@ function processAndAddModel(gltf, modelName, isAppend){
       if (box.max.x > maxX) maxX = box.max.x;
     });
     
-    // Увеличенный отступ для гарантированного разделения моделей
-    const offset = 100;
-    offsetX = maxX + offset;
+    // Вычисляем ширину новой модели
+    const newBox = new THREE.Box3().setFromObject(group);
+    const newWidth = newBox.max.x - newBox.min.x;
     
-    console.log('Добавление модели справа. maxX существующих:', maxX, 'новая позиция X:', offsetX);
+    // Отступ = половина ширины новой модели + 50 единиц
+    offsetX = maxX + (newWidth / 2) + 50;
+    
+    console.log('Добавление модели. maxX:', maxX, 'ширина новой:', newWidth, 'позиция X:', offsetX);
   } else {
     offsetX = 0;
     offsetY = 0;
@@ -585,7 +577,7 @@ function updateSceneListUI(){
   countEl.textContent = sceneModels.length;
   
   if (sceneModels.length === 0) {
-    container.innerHTML = '<div style="color:#999;font-size:13px;text-align:center;padding:10px;">Сцена пуста</div>';
+    container.innerHTML = '<div style="color:#999;font-size:11px;text-align:center;padding:8px;">Сцена пуста</div>';
     return;
   }
   
@@ -701,35 +693,35 @@ function resetModel(){
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-// Создание текстовой метки
+// Создание текстовой метки (увеличенный размер)
 function createTextSprite(text, position) {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
-  canvas.width = 256;
-  canvas.height = 64;
+  canvas.width = 300;
+  canvas.height = 80;
   
   context.fillStyle = 'rgba(0, 68, 204, 0.95)';
-  context.fillRect(0, 0, 256, 64);
+  context.fillRect(0, 0, 300, 80);
   
   context.fillStyle = 'white';
-  context.font = 'bold 28px Arial';
+  context.font = 'bold 36px Arial';
   context.textAlign = 'center';
   context.textBaseline = 'middle';
-  context.fillText(text, 128, 32);
+  context.fillText(text, 150, 40);
   
   const texture = new THREE.CanvasTexture(canvas);
   const material = new THREE.SpriteMaterial({ map: texture, depthTest: false });
   const sprite = new THREE.Sprite(material);
   sprite.position.copy(position);
-  sprite.scale.set(60, 15, 1);
+  sprite.scale.set(80, 21, 1);
   sprite.renderOrder = 999;
   
   return sprite;
 }
 
 // Создание маркера точки
-function createMarker(point, color) {
-  const geometry = new THREE.SphereGeometry(2, 16, 16);
+function createMarker(point, color, size = 3) {
+  const geometry = new THREE.SphereGeometry(size, 16, 16);
   const material = new THREE.MeshBasicMaterial({ color: color, depthTest: false });
   const marker = new THREE.Mesh(geometry, material);
   marker.position.copy(point);
@@ -737,7 +729,32 @@ function createMarker(point, color) {
   return marker;
 }
 
-// Создание линии с выноской (как в CAD)
+// Привязка к ближайшей вершине (snapping)
+function snapToVertex(point) {
+  let closestVertex = null;
+  let minDistance = SNAP_DISTANCE;
+  
+  allMeshes.forEach(mesh => {
+    const geometry = mesh.geometry;
+    const position = geometry.attributes.position;
+    const worldMatrix = mesh.matrixWorld;
+    
+    for (let i = 0; i < position.count; i++) {
+      const vertex = new THREE.Vector3().fromBufferAttribute(position, i);
+      vertex.applyMatrix4(worldMatrix);
+      
+      const distance = vertex.distanceTo(point);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestVertex = vertex.clone();
+      }
+    }
+  });
+  
+  return closestVertex;
+}
+
+// Создание линейки с выноской
 function createRulerWithExtension(startPoint, endPoint) {
   const group = new THREE.Group();
   
@@ -746,7 +763,7 @@ function createRulerWithExtension(startPoint, endPoint) {
   const cameraDirection = new THREE.Vector3().subVectors(camera.position, midPoint).normalize();
   
   // Смещение выноски от поверхности (в сторону камеры)
-  const offsetDistance = 30;
+  const offsetDistance = 40;
   const offsetVector = cameraDirection.multiplyScalar(offsetDistance);
   
   // Точки выноски (смещённые от поверхности)
@@ -772,14 +789,14 @@ function createRulerWithExtension(startPoint, endPoint) {
   group.add(extLine2);
   
   // Маркеры на концах выносок
-  const marker1 = createMarker(startOffset, 0x0044cc);
-  const marker2 = createMarker(endOffset, 0x0044cc);
+  const marker1 = createMarker(startOffset, 0x0044cc, 4);
+  const marker2 = createMarker(endOffset, 0x0044cc, 4);
   group.add(marker1);
   group.add(marker2);
   
   // Маркеры на точках измерения
-  const pointMarker1 = createMarker(startPoint, 0xff0000);
-  const pointMarker2 = createMarker(endPoint, 0xff0000);
+  const pointMarker1 = createMarker(startPoint, 0xff0000, 5);
+  const pointMarker2 = createMarker(endPoint, 0xff0000, 5);
   group.add(pointMarker1);
   group.add(pointMarker2);
   
@@ -797,6 +814,10 @@ function clearRuler() {
   if (rulerGroup) {
     scene.remove(rulerGroup);
     rulerGroup = null;
+  }
+  if (snapMarker) {
+    scene.remove(snapMarker);
+    snapMarker = null;
   }
   rulerStartPoint = null;
 }
@@ -817,22 +838,21 @@ renderer.domElement.addEventListener('click', (event) => {
     if (intersects.length > 0) {
       const point = intersects[0].point;
       
+      // Пробуем привязаться к вершине
+      const snappedPoint = snapToVertex(point);
+      const finalPoint = snappedPoint || point;
+      
       if (!rulerStartPoint) {
         // Первый клик - ставим начальную точку
-        rulerStartPoint = point.clone();
+        rulerStartPoint = finalPoint.clone();
         
       } else {
         // Второй клик - ставим конечную точку и показываем результат
-        const endPoint = point.clone();
+        const endPoint = finalPoint.clone();
         
         // Создаём линейку с выноской
         rulerGroup = createRulerWithExtension(rulerStartPoint, endPoint);
         scene.add(rulerGroup);
-        
-        const distance = rulerStartPoint.distanceTo(endPoint);
-        const distanceMM = Math.round(distance);
-        
-        alert(`Расстояние: ${distanceMM} мм`);
         
         rulerStartPoint = null;
       }
@@ -867,9 +887,9 @@ renderer.domElement.addEventListener('click', (event) => {
   }
 });
 
-// Движение мыши для линейки
+// Движение мыши для линейки с привязкой
 renderer.domElement.addEventListener('mousemove', (event) => {
-  if (!rulerMode || !rulerStartPoint) return;
+  if (!rulerMode) return;
   
   const rect = renderer.domElement.getBoundingClientRect();
   mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -879,16 +899,34 @@ renderer.domElement.addEventListener('mousemove', (event) => {
   const intersects = raycaster.intersectObjects(allMeshes, true);
   
   if (intersects.length > 0) {
-    const currentPoint = intersects[0].point;
+    const point = intersects[0].point;
     
-    // Удаляем старую линейку
-    if (rulerGroup) {
-      scene.remove(rulerGroup);
+    // Пробуем привязаться к вершине
+    const snappedPoint = snapToVertex(point);
+    const finalPoint = snappedPoint || point;
+    
+    // Показываем маркер привязки
+    if (snapMarker) {
+      scene.remove(snapMarker);
     }
+    snapMarker = createMarker(finalPoint, snappedPoint ? 0x00ff00 : 0xffff00, 6);
+    scene.add(snapMarker);
     
-    // Рисуем временную линейку с выноской
-    rulerGroup = createRulerWithExtension(rulerStartPoint, currentPoint);
-    scene.add(rulerGroup);
+    if (rulerStartPoint) {
+      // Удаляем старую линейку
+      if (rulerGroup) {
+        scene.remove(rulerGroup);
+      }
+      
+      // Рисуем временную линейку с выноской
+      rulerGroup = createRulerWithExtension(rulerStartPoint, finalPoint);
+      scene.add(rulerGroup);
+    }
+  } else {
+    if (snapMarker) {
+      scene.remove(snapMarker);
+      snapMarker = null;
+    }
   }
 });
 
@@ -899,10 +937,9 @@ rulerBtn.addEventListener('click', () => {
   rulerMode = !rulerMode;
   
   if (rulerMode) {
-    rulerBtn.textContent = ' Линейка (вкл)';
+    rulerBtn.textContent = '📏 Линейка (вкл)';
     rulerBtn.classList.add('active');
     controls.enabled = false;
-    alert('Режим линейки включён. Кликните на первую точку, затем тяните мышь и кликните на вторую точку.');
   } else {
     rulerBtn.textContent = ' Линейка (выкл)';
     rulerBtn.classList.remove('active');
