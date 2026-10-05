@@ -63,10 +63,6 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 #ruler-settings-btn{width:36px;height:36px;background:#f0f0f0;border:2px solid #999;border-radius:6px;cursor:pointer;font-size:18px;transition:0.2s;display:flex;align-items:center;justify-content:center}
 #ruler-settings-btn:hover{background:#e0e0e0}
 
-#reorder-btn{margin:0 10px 10px 10px;padding:10px;background:#f0f0f0;border:2px solid #999;color:#333;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px;transition:0.2s}
-#reorder-btn:hover{background:#e0e0e0}
-#reorder-btn.active{background:#28a745;color:white;border-color:#218838}
-
 #loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);color:white;padding:25px;border-radius:10px;z-index:200;display:none;text-align:center}
 #loading.show{display:block}
 .spinner{width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid #0044cc;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
@@ -208,10 +204,9 @@ kbd {
   
   <button id="reset-btn">Вернуть материал</button>
   <div class="ruler-controls">
-    <button id="ruler-btn"> Линейка (выкл)</button>
+    <button id="ruler-btn">📏 Линейка (выкл)</button>
     <button id="ruler-settings-btn" title="Настройки">⚙️</button>
   </div>
-  <button id="reorder-btn">⇄ Переставить (выкл)</button>
   <button id="screenshot-btn">Скачать изображение</button>
 </div>
 
@@ -222,12 +217,12 @@ kbd {
     <button class="modal-close" id="close-modal">&times;</button>
     <h2>📖 Как пользоваться конфигуратором</h2>
     <ul class="instruction-list">
-      <li><strong>1. Добавление изделий.</strong> Нажмите синюю кнопку <strong>➕</strong> рядом с моделью в каталоге. Первое изделие появится в центре сцены, каждое следующее добавится справа от предыдущего. Максимум 5 изделий.</li>
+      <li><strong>1. Добавление изделий.</strong> Нажмите синюю кнопку <strong></strong> рядом с моделью в каталоге. Первое изделие появится в центре сцены, каждое следующее добавится справа от предыдущего. Максимум 5 изделий.</li>
       <li><strong>2. Антресоли.</strong> Нажмите зелёную кнопку <strong>со стрелкой вверх</strong> — антресоль автоматически встанет сверху на последнее добавленное изделие, у которого ещё нет антресоли. Максимум 5 антресолей.</li>
       <li><strong>3. Вращение и масштаб.</strong> Зажмите левую кнопку мыши и двигайте для вращения сцены. Колесико мыши — приближение/отдаление.</li>
-      <li><strong>4. Выделение деталей.</strong> Кликните по детали на 3D-модели — она подсветится. Зажмите <kbd>Ctrl</kbd> (или <kbd>Cmd</kbd> на Mac) для выделения нескольких деталей. Затем выберите цвет или текстуру на правой панели.</li>
-      <li><strong>5. Покраска всего изделия.</strong> Включите галочку «Заменить весь цвет» — цвет применится ко всем деталям сразу. Галочка автоматически снимется после применения.</li>
-      <li><strong>6. Перестановка изделий.</strong> Нажмите кнопку <strong>«⇄ Переставить»</strong>. Кликните на любое изделие в сцене и, удерживая левую кнопку мыши, перетащите его влево или вправо. При отпускании мыши все изделия автоматически выстроятся в ряд с заданным расстоянием. Антресоли перемещаются вместе со своими шкафами.</li>
+      <li><strong>4. Выделение деталей.</strong> Кликните <strong>левой кнопкой мыши</strong> по детали на 3D-модели — она подсветится. Зажмите <kbd>Ctrl</kbd> (или <kbd>Cmd</kbd> на Mac) для выделения нескольких деталей. Затем выберите цвет или текстуру на правой панели. Красится только выбранная деталь.</li>
+      <li><strong>5. Перестановка изделий.</strong> Зажмите <strong>правую кнопку мыши</strong> на любом изделии и перетащите его влево или вправо. При отпускании все изделия автоматически выстроятся в ряд с заданным расстоянием. Антресоли перемещаются вместе со своими шкафами.</li>
+      <li><strong>6. Покраска всего изделия.</strong> Включите галочку «Заменить весь цвет» — цвет применится ко всем деталям сразу. Галочка автоматически снимется после применения.</li>
       <li><strong>7. Линейка.</strong> Нажмите кнопку <strong>«📏 Линейка»</strong>. Кликните на первую точку модели, затем на вторую. Двигайте мышь в любую сторону — выноска с размером будет следовать за курсором. Кликните третий раз, чтобы зафиксировать размер. Можно ставить сколько угодно линеек из одной точки.</li>
       <li><strong>8. Настройки.</strong> Нажмите <strong>⚙️</strong> рядом с кнопкой линейки. Здесь можно настроить размер текста (75–300 px) и расстояние между изделиями (0–200). Изменение расстояния мгновенно переставляет модели на сцене.</li>
       <li><strong>9. Скачать изображение.</strong> Нажмите кнопку «Скачать изображение» — сохранится PNG-снимок текущего вида сцены.</li>
@@ -347,11 +342,9 @@ let allRulerGroups = [];
 const SNAP_DISTANCE = 15;
 let fixedPerpDir = null;
 
-// Режим перестановки
-let reorderMode = false;
+// Перетаскивание через правую кнопку мыши
 let draggedModel = null;
 let dragOffsetX = 0;
-let dragPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
 
 let rulerSettings = {
   fontSize: 120,
@@ -420,7 +413,7 @@ function renderModelsList(models){
     div.innerHTML = `
       <h3>${model.name}</h3>
       <div class="model-buttons">
-        <button class="add-model-btn" title="Добавить изделие">➕</button>
+        <button class="add-model-btn" title="Добавить изделие"></button>
         <button class="add-top-btn" title="Добавить антресоль">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M8 3L13 9H3L8 3Z" fill="white"/>
@@ -482,14 +475,11 @@ function recalculateRegularModelsPositions() {
   fitCameraToScene();
 }
 
-// Пересчёт позиций после перетаскивания — сортирует модели по X и выстраивает в ряд
 function recalculateAfterDrag() {
   const regularModels = sceneModels.filter(m => !m.isTop);
   
-  // Сортируем по текущей позиции X
   regularModels.sort((a, b) => a.group.position.x - b.group.position.x);
   
-  // Вычисляем новые позиции
   let currentX = 0;
   regularModels.forEach((model, index) => {
     if (index > 0) {
@@ -500,7 +490,6 @@ function recalculateAfterDrag() {
     }
     model.group.position.x = currentX;
     
-    // Антресоли следуют за родителем
     const topModels = sceneModels.filter(m => m.isTop && m.parentModel === model);
     topModels.forEach(topModel => {
       if (topModel.relativeOffset) {
@@ -795,23 +784,6 @@ function updateSceneListUI(){
   });
 }
 
-function findAdjacentEdges(object){
-  const objectBox = new THREE.Box3().setFromObject(object);
-  objectBox.expandByScalar(1.0);
-  const adjacent = [];
-  const objCenter = objectBox.getCenter(new THREE.Vector3());
-  
-  allMeshes.forEach(mesh => {
-    if(mesh === object) return;
-    const meshBox = new THREE.Box3().setFromObject(mesh);
-    if(objectBox.intersectsBox(meshBox)){
-      const meshCenter = meshBox.getCenter(new THREE.Vector3());
-      if(Math.abs(objCenter.y - meshCenter.y) < 10) adjacent.push(mesh);
-    }
-  });
-  return adjacent;
-}
-
 const textureLoader = new THREE.TextureLoader();
 
 function applyMaterial(value){
@@ -828,11 +800,8 @@ function applyMaterial(value){
       alert('Сначала кликните по детали (или по нескольким с зажатым Ctrl) в 3D-сцене');
       return;
     }
-    selectedObjects.forEach(obj => {
-      if (!group.includes(obj)) group.push(obj);
-      const edges = findAdjacentEdges(obj);
-      edges.forEach(edge => { if (!group.includes(edge)) group.push(edge); });
-    });
+    // ИСПРАВЛЕНИЕ: красим только выбранные детали, без автоматического добавления соседей
+    group = [...selectedObjects];
   }
 
   textureLoader.load(value, (tex) => {
@@ -1024,7 +993,6 @@ function clearAllRulers() {
   clearRuler();
 }
 
-// Находит модель (обычное изделие), которой принадлежит меш
 function findModelByMesh(mesh) {
   for (const model of sceneModels) {
     if (!model.isTop && model.meshes.includes(mesh)) {
@@ -1034,8 +1002,9 @@ function findModelByMesh(mesh) {
   return null;
 }
 
+// ПРАВАЯ КНОПКА МЫШИ — перетаскивание изделий
 renderer.domElement.addEventListener('mousedown', (event) => {
-  if (!reorderMode || event.button !== 0) return;
+  if (event.button !== 2) return; // Только правая кнопка
   
   const rect = renderer.domElement.getBoundingClientRect();
   mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -1049,10 +1018,10 @@ renderer.domElement.addEventListener('mousedown', (event) => {
     const model = findModelByMesh(mesh);
     
     if (model) {
+      event.preventDefault(); // Предотвращаем контекстное меню
       draggedModel = model;
       controls.enabled = false;
       
-      // Вычисляем смещение курсора относительно центра модели
       const intersectPoint = intersects[0].point;
       dragOffsetX = intersectPoint.x - model.group.position.x;
       
@@ -1066,7 +1035,7 @@ renderer.domElement.addEventListener('mousedown', (event) => {
 });
 
 renderer.domElement.addEventListener('mousemove', (event) => {
-  if (!reorderMode || !draggedModel) return;
+  if (!draggedModel) return;
   
   const rect = renderer.domElement.getBoundingClientRect();
   mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -1074,7 +1043,6 @@ renderer.domElement.addEventListener('mousemove', (event) => {
   
   raycaster.setFromCamera(mouse, camera);
   
-  // Проецируем на плоскость Y=0 для получения X-координаты
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   const target = new THREE.Vector3();
   raycaster.ray.intersectPlane(plane, target);
@@ -1083,7 +1051,6 @@ renderer.domElement.addEventListener('mousemove', (event) => {
     draggedModel.group.position.x = target.x - dragOffsetX;
     draggedModel.group.updateMatrixWorld(true);
     
-    // Антресоль следует за родителем
     const topModels = sceneModels.filter(m => m.isTop && m.parentModel === draggedModel);
     topModels.forEach(topModel => {
       if (topModel.relativeOffset) {
@@ -1097,21 +1064,25 @@ renderer.domElement.addEventListener('mousemove', (event) => {
 });
 
 renderer.domElement.addEventListener('mouseup', (event) => {
-  if (!reorderMode || !draggedModel) return;
+  if (event.button !== 2 || !draggedModel) return;
   
-  // Снимаем подсветку
   draggedModel.meshes.forEach(m => {
     const mats = Array.isArray(m.material) ? m.material : [m.material];
     mats.forEach(mt => { if(mt.emissive) mt.emissive.setHex(0x000000); });
   });
   
-  // Пересчитываем позиции всех моделей
   recalculateAfterDrag();
   
   draggedModel = null;
   controls.enabled = true;
 });
 
+// Отключаем контекстное меню на правой кнопке
+renderer.domElement.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+});
+
+// ЛЕВАЯ КНОПКА МЫШИ — выделение деталей и линейка
 renderer.domElement.addEventListener('click', (event) => {
   if(sceneModels.length === 0) return;
 
@@ -1163,9 +1134,6 @@ renderer.domElement.addEventListener('click', (event) => {
     return;
   }
 
-  // В режиме перестановки клик не должен выделять детали
-  if (reorderMode) return;
-
   const intersects = raycaster.intersectObjects(allMeshes, true);
 
   allMeshes.forEach(m => {
@@ -1207,7 +1175,7 @@ function projectMouseToPlane(mouseX, mouseY, midPoint, planeNormal) {
 }
 
 renderer.domElement.addEventListener('mousemove', (event) => {
-  if (!rulerMode || reorderMode) return;
+  if (!rulerMode || draggedModel) return;
   
   const rect = renderer.domElement.getBoundingClientRect();
   mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -1274,13 +1242,7 @@ rulerBtn.addEventListener('click', () => {
   rulerMode = !rulerMode;
   
   if (rulerMode) {
-    // Если был включён режим перестановки — выключаем его
-    if (reorderMode) {
-      reorderMode = false;
-      document.getElementById('reorder-btn').textContent = ' Переставить (выкл)';
-      document.getElementById('reorder-btn').classList.remove('active');
-    }
-    rulerBtn.textContent = ' Линейка (вкл)';
+    rulerBtn.textContent = '📏 Линейка (вкл)';
     rulerBtn.classList.add('active');
     controls.enabled = false;
   } else {
@@ -1288,29 +1250,6 @@ rulerBtn.addEventListener('click', () => {
     rulerBtn.classList.remove('active');
     controls.enabled = true;
     clearRuler();
-  }
-});
-
-const reorderBtn = document.getElementById('reorder-btn');
-reorderBtn.addEventListener('click', () => {
-  reorderMode = !reorderMode;
-  
-  if (reorderMode) {
-    // Если была включена линейка — выключаем её
-    if (rulerMode) {
-      rulerMode = false;
-      rulerBtn.textContent = ' Линейка (выкл)';
-      rulerBtn.classList.remove('active');
-      clearRuler();
-    }
-    reorderBtn.textContent = ' Переставить (вкл)';
-    reorderBtn.classList.add('active');
-    controls.enabled = false;
-  } else {
-    reorderBtn.textContent = '⇄ Переставить (выкл)';
-    reorderBtn.classList.remove('active');
-    controls.enabled = true;
-    draggedModel = null;
   }
 });
 
