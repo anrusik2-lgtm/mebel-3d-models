@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Конфигуратор мебели</title>
+    <title>3D Конфигуратор мебели - ВиллаМебель</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; overflow: hidden; background: #f0f0f0; }
@@ -48,7 +48,8 @@
 <body>
     <div id="sidebar">
         <div id="sidebar-header">
-            <h1>3D конфигуратор мебели</h1>
+            <h1>🏭 ВиллаМебель</h1>
+            <p>3D конфигуратор мебели</p>
         </div>
         <div id="search-box">
             <input type="text" id="search-input" placeholder="🔍 Поиск модели...">
@@ -63,8 +64,8 @@
     <div id="main-area"><div id="viewport"></div></div>
     <div id="settings-panel">
         <div class="tabs">
-            <div class="tab active" onclick="switchTab('colors')"> Цвета</div>
-            <div class="tab" onclick="switchTab('textures')">️ Текстуры</div>
+            <div class="tab active" onclick="switchTab('colors')">🎨 Цвета</div>
+            <div class="tab" onclick="switchTab('textures')">🖼️ Текстуры</div>
         </div>
         <div id="colors" class="tab-content active">
             <div class="color-grid">
@@ -241,7 +242,7 @@
         document.querySelectorAll('.color-btn, #reset-btn').forEach(btn => btn.addEventListener('click', () => applyMaterial(btn.dataset.type, btn.dataset.value)));
 
         const textureListEl = document.getElementById('texture-list');
-        const categories = { 'fantasy': '🎨 Фантазийные', 'standard': '🪵 Стандартные' };
+        const categories = { 'fantasy': ' Фантазийные', 'standard': ' Стандартные' };
         for (const [catKey, catTitle] of Object.entries(categories)) {
             const header = document.createElement('div'); header.className = 'category-title'; header.innerText = catTitle; textureListEl.appendChild(header);
             texturesData.filter(t => t.category === catKey).forEach(tex => {
