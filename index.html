@@ -203,25 +203,22 @@ function initScene(){
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // Фоновый свет (увеличил с 0.9 до 1.2)
-  scene.add(new THREE.AmbientLight(0xffffff, 1.2));
-  
+  // Фоновый свет
+  scene.add(new THREE.AmbientLight(0xffffff, 1.1));
+
   // Основной свет сверху-сбоку
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
   dirLight.position.set(10, 20, 10);
   scene.add(dirLight);
-  
-  // === ДОБАВЬ ЭТО: Фронтальный свет ===
-  const frontLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  frontLight.position.set(0, 5, 15); // Светит прямо спереди, чуть сверху
-  scene.add(frontLight);
-  
-  // Дополнительный свет снизу для заполнения теней
-  const bottomLight = new THREE.DirectionalLight(0xffffff, 0.3);
-  bottomLight.position.set(0, -10, 5);
-  scene.add(bottomLight);
-  
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xffffff, 0.8));
+
+  // === СВЕТ ПРЯМО СПЕРЕДИ, привязан к камере ===
+  scene.add(camera); // камера становится частью сцены
+  const cameraLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  cameraLight.position.set(0, 0, 10); // стоит перед камерой и светит вдоль её взгляда
+  camera.add(cameraLight);
+
+  // Мягкий рассеянный свет
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xffffff, 0.7));
 
   const grid = new THREE.GridHelper(100, 100, 0xdddddd, 0xeeeeee);
   scene.add(grid);
