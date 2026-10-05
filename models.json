@@ -6,20 +6,6 @@
       "file": "antresol_dlya_shkafa_4.glb",
       "category": "шкафы",
       "tags": ["антресоль", "шкаф"]
-    },
-    {
-      "id": 2,
-      "name": "Кухня игровая Эмили",
-      "file": "kuhnya_igrovaya_emili.glb",
-      "category": "кухни",
-      "tags": ["кухня", "игровая"]
-    },
-    {
-      "id": 3,
-      "name": "Парикмахер игровой №1",
-      "file": "parikmaher_igrovoi_1.glb",
-      "category": "детская",
-      "tags": ["парикмахер", "игровая"]
     }
   ]
 }
