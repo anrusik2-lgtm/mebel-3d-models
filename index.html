@@ -352,16 +352,6 @@ function processModel(model, modelName){
   controls.update();
 }
 
-  const center = box.getCenter(new THREE.Vector3());
-  const fov = camera.fov * (Math.PI / 180);
-  const cameraZ = (maxDim / 2) / Math.tan(fov / 2) * 1.8;
-
-  camera.position.set(center.x, center.y + size.y * 0.2, center.z - cameraZ);
-  camera.lookAt(center);
-  controls.target.copy(center);
-  controls.update();
-}
-
 function findAdjacentEdges(object){
   const objectBox = new THREE.Box3().setFromObject(object);
   objectBox.expandByScalar(NEIGHBOR_TOLERANCE);
