@@ -390,6 +390,24 @@ function setMode(mode) {
   document.body.className = mode === 'basic' ? 'mode-basic' : 'mode-advanced';
   document.getElementById('link-basic').classList.toggle('active', mode === 'basic');
   document.getElementById('link-advanced').classList.toggle('active', mode === 'advanced');
+  
+  // Очищаем сцену при переключении режимов
+  if (sceneModels.length > 0) {
+    sceneModels.forEach(model => {
+      scene.remove(model.group);
+      model.group.traverse(c => { if(c.geometry) c.geometry.dispose(); });
+      model.meshes.forEach(m => originalMaterials.delete(m.uuid));
+    });
+    sceneModels = [];
+    allMeshes = [];
+    selectedObjects = [];
+    updateSceneListUI();
+    
+    camera.position.set(0, 0, 10);
+    camera.lookAt(0, 0, 0);
+    controls.target.set(0, 0, 0);
+    controls.update();
+  }
 }
 
 document.getElementById('link-basic').addEventListener('click', (e) => {
