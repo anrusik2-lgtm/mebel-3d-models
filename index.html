@@ -81,6 +81,7 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 .scene-item:hover { background: #f0f8ff; }
 .scene-item.dragging { opacity: 0.4; background: #e3f2fd; border: 2px dashed #0044cc; }
 .scene-item.drag-over { border-top: 3px solid #0044cc; }
+.scene-item.top-item { background: #f0fff0; border-left: 3px solid #28a745; }
 .scene-item button {
   background: #ff4444; color: white; border: none; border-radius: 3px;
   padding: 3px 6px; cursor: pointer; font-size: 10px; transition: background 0.2s;
@@ -221,12 +222,12 @@ kbd {
     <h2> Как пользоваться конфигуратором</h2>
     <ul class="instruction-list">
       <li><strong>1. Добавление изделий.</strong> Нажмите синюю кнопку <strong>➕</strong> рядом с моделью в каталоге. Первое изделие появится в центре сцены, каждое следующее добавится справа от предыдущего. Максимум 5 изделий.</li>
-      <li><strong>2. Антресоли.</strong> Нажмите зелёную кнопку <strong>со стрелкой вверх</strong> — антресоль автоматически встанет сверху на последнее добавленное изделие, у которого ещё нет антресоли. Максимум 5 антресолей.</li>
+      <li><strong>2. Антресоли.</strong> Нажмите зелёную кнопку <strong>со стрелкой вверх</strong> — антресоль автоматически встанет сверху на последнее добавленное изделие, у которого ещё нет антресоли. Максимум 5 антресолей. Антресоль жёстко привязана к своему шкафу.</li>
       <li><strong>3. Вращение и масштаб.</strong> Зажмите левую кнопку мыши и двигайте для вращения сцены. Колесико мыши — приближение/отдаление.</li>
       <li><strong>4. Выделение деталей.</strong> Кликните <strong>левой кнопкой мыши</strong> по детали на 3D-модели — она подсветится. Зажмите <kbd>Ctrl</kbd> (или <kbd>Cmd</kbd> на Mac) для выделения нескольких деталей. Затем выберите цвет или текстуру на правой панели. Красится только выбранная деталь.</li>
-      <li><strong>5. Перестановка изделий.</strong> В списке <strong>«Добавлено в сцену»</strong> зажмите левую кнопку мыши на любом изделии и перетащите его на нужное место. Изделия на сцене автоматически перестроятся в новом порядке. Антресоли перемещаются вместе со своими шкафами.</li>
+      <li><strong>5. Перестановка изделий.</strong> В списке <strong>«Добавлено в сцену»</strong> зажмите левую кнопку мыши на любом изделии и перетащите его на нужное место. Антресоль перемещается вместе со своим шкафом. Антресоли нельзя перемещать отдельно.</li>
       <li><strong>6. Покраска всего изделия.</strong> Включите галочку «Заменить весь цвет» — цвет применится ко всем деталям сразу. Галочка автоматически снимется после применения.</li>
-      <li><strong>7. Линейка.</strong> Нажмите кнопку <strong>«📏 Линейка»</strong>. Кликните на первую точку модели, затем на вторую. Двигайте мышь в любую сторону — выноска с размером будет следовать за курсором. Кликните третий раз, чтобы зафиксировать размер. Можно ставить сколько угодно линеек из одной точки.</li>
+      <li><strong>7. Линейка.</strong> Нажмите кнопку <strong>« Линейка»</strong>. Кликните на первую точку модели, затем на вторую. Двигайте мышь в любую сторону — выноска с размером будет следовать за курсором. Кликните третий раз, чтобы зафиксировать размер. Можно ставить сколько угодно линеек из одной точки.</li>
       <li><strong>8. Настройки.</strong> Нажмите <strong>⚙️</strong> рядом с кнопкой линейки. Здесь можно настроить размер текста (75–300 px) и расстояние между изделиями (0–200). Изменение расстояния мгновенно переставляет модели на сцене.</li>
       <li><strong>9. Скачать изображение.</strong> Нажмите кнопку «Скачать изображение» — сохранится PNG-снимок текущего вида сцены.</li>
       <li><strong>10. Очистка.</strong> «Очистить сцену» удаляет все модели. «Удалить линейки» убирает только размеры, оставляя модели.</li>
@@ -444,7 +445,7 @@ document.getElementById('search-input').addEventListener('input', (e) => {
   ));
 });
 
-// Пересчёт позиций с использованием СОХРАНЁННОЙ ширины каждой модели
+// Пересчёт позиций с использованием СОХРАНЁННЫХ границ моделей
 function recalculateRegularModelsPositions() {
   const regularModels = sceneModels.filter(m => !m.isTop);
   
@@ -458,12 +459,13 @@ function recalculateRegularModelsPositions() {
       model.group.position.x = prevBox.max.x + rulerSettings.spacing - model.cleanMinX;
     }
     
+    // Антресоли жёстко следуют за родителем
     const topModels = sceneModels.filter(m => m.isTop && m.parentModel === model);
     topModels.forEach(topModel => {
       if (topModel.relativeOffset) {
         topModel.group.position.x = model.group.position.x + topModel.relativeOffset.x;
-        topModel.group.position.y = topModel.relativeOffset.y;
-        topModel.group.position.z = topModel.relativeOffset.z;
+        topModel.group.position.y = model.group.position.y + topModel.relativeOffset.y;
+        topModel.group.position.z = model.group.position.z + topModel.relativeOffset.z;
       }
     });
     
@@ -480,11 +482,11 @@ function processAndAddModel(gltf, modelName, addOnTop){
   scene.add(group);
   group.updateMatrixWorld(true);
   
-// Вычисляем "чистые" границы модели при позиции (0,0,0)
-const cleanBox = new THREE.Box3().setFromObject(group);
-const cleanMinX = cleanBox.min.x;
-const cleanMaxX = cleanBox.max.x;
-const cleanWidth = cleanMaxX - cleanMinX;
+  // Вычисляем "чистые" границы модели
+  const cleanBox = new THREE.Box3().setFromObject(group);
+  const cleanMinX = cleanBox.min.x;
+  const cleanMaxX = cleanBox.max.x;
+  const cleanWidth = cleanMaxX - cleanMinX;
   
   let offsetX = 0, offsetY = 0, offsetZ = 0;
 
@@ -530,6 +532,7 @@ const cleanWidth = cleanMaxX - cleanMinX;
     group.position.set(offsetX, offsetY, offsetZ);
     group.updateMatrixWorld(true);
     
+    // ИСПРАВЛЕНИЕ: relativeOffset теперь = позиция антресоли - позиция родителя
     const modelEntry = {
       id: nextModelId++,
       name: modelName,
@@ -537,7 +540,13 @@ const cleanWidth = cleanMaxX - cleanMinX;
       meshes: [],
       isTop: true,
       parentModel: targetModel,
-      relativeOffset: { x: offsetX, y: offsetY, z: offsetZ },
+      relativeOffset: { 
+        x: group.position.x - targetModel.group.position.x,
+        y: group.position.y - targetModel.group.position.y,
+        z: group.position.z - targetModel.group.position.z
+      },
+      cleanMinX: cleanMinX,
+      cleanMaxX: cleanMaxX,
       cleanWidth: cleanWidth
     };
     
@@ -568,43 +577,41 @@ const cleanWidth = cleanMaxX - cleanMinX;
     updateSceneListUI();
     fitCameraToScene();
     
-} else {
-  const regularModels = sceneModels.filter(m => !m.isTop);
-  if (regularModels.length >= MAX_REGULAR) {
-    scene.remove(group);
-    alert(`Можно добавить максимум ${MAX_REGULAR} обычных изделий.`);
-    return;
-  }
-  
-if (regularModels.length > 0) {
-  const lastModel = regularModels[regularModels.length - 1];
-  const lastBox = new THREE.Box3().setFromObject(lastModel.group);
-  
-  // Левый край новой модели должен быть на расстоянии spacing от правого края последней
-  // Левый край новой = group.position.x + cleanMinX
-  // Значит: group.position.x = lastBox.max.x + spacing - cleanMinX
-  offsetX = lastBox.max.x + rulerSettings.spacing - cleanMinX;
-} else {
-  offsetX = 0;
-  offsetY = 0;
-  offsetZ = 0;
-}
-  
-  group.position.set(offsetX, offsetY, offsetZ);
-  group.updateMatrixWorld(true);
-  
-const modelEntry = {
-  id: nextModelId++,
-  name: modelName,
-  group: group,
-  meshes: [],
-  isTop: false,
-  parentModel: null,
-  relativeOffset: null,
-  cleanMinX: cleanMinX,
-  cleanMaxX: cleanMaxX,
-  cleanWidth: cleanWidth
-};
+  } else {
+    const regularModels = sceneModels.filter(m => !m.isTop);
+    if (regularModels.length >= MAX_REGULAR) {
+      scene.remove(group);
+      alert(`Можно добавить максимум ${MAX_REGULAR} обычных изделий.`);
+      return;
+    }
+    
+    if (regularModels.length > 0) {
+      const lastModel = regularModels[regularModels.length - 1];
+      const lastBox = new THREE.Box3().setFromObject(lastModel.group);
+      
+      // Левый край новой модели = правый край последней + отступ
+      offsetX = lastBox.max.x + rulerSettings.spacing - cleanMinX;
+    } else {
+      offsetX = 0;
+      offsetY = 0;
+      offsetZ = 0;
+    }
+    
+    group.position.set(offsetX, offsetY, offsetZ);
+    group.updateMatrixWorld(true);
+    
+    const modelEntry = {
+      id: nextModelId++,
+      name: modelName,
+      group: group,
+      meshes: [],
+      isTop: false,
+      parentModel: null,
+      relativeOffset: null,
+      cleanMinX: cleanMinX,
+      cleanMaxX: cleanMaxX,
+      cleanWidth: cleanWidth
+    };
     
     group.traverse((child) => {
       if(child.isMesh){
@@ -687,6 +694,20 @@ function removeModelFromScene(id){
   if (index === -1) return;
   
   const model = sceneModels[index];
+  
+  // Если удаляем обычный шкаф — удаляем и его антресоль
+  if (!model.isTop) {
+    const topModel = sceneModels.find(m => m.isTop && m.parentModel === model);
+    if (topModel) {
+      scene.remove(topModel.group);
+      topModel.group.traverse(c => { if(c.geometry) c.geometry.dispose(); });
+      allMeshes = allMeshes.filter(m => !topModel.meshes.includes(m));
+      topModel.meshes.forEach(m => originalMaterials.delete(m.uuid));
+      const topIndex = sceneModels.findIndex(m => m.id === topModel.id);
+      if (topIndex !== -1) sceneModels.splice(topIndex, 1);
+    }
+  }
+  
   scene.remove(model.group);
   model.group.traverse(c => { if(c.geometry) c.geometry.dispose(); });
   
@@ -741,9 +762,13 @@ function updateSceneListUI(){
   
   sceneModels.forEach(model => {
     const item = document.createElement('div');
-    item.className = 'scene-item';
+    item.className = 'scene-item' + (model.isTop ? ' top-item' : '');
     item.dataset.modelId = model.id;
-    item.draggable = true;
+    
+    // Антресоли нельзя перетаскивать отдельно
+    if (!model.isTop) {
+      item.draggable = true;
+    }
     
     const nameSpan = document.createElement('span');
     nameSpan.style.flex = '1';
@@ -754,7 +779,7 @@ function updateSceneListUI(){
     nameSpan.textContent = model.name + (model.isTop ? ' (антресоль)' : '');
     
     const removeBtn = document.createElement('button');
-    removeBtn.textContent = '✕';
+    removeBtn.textContent = '';
     removeBtn.title = 'Удалить из сцены';
     removeBtn.onmouseover = () => removeBtn.style.background = '#cc0000';
     removeBtn.onmouseout = () => removeBtn.style.background = '#ff4444';
@@ -766,52 +791,79 @@ function updateSceneListUI(){
     item.appendChild(nameSpan);
     item.appendChild(removeBtn);
     
-    item.addEventListener('dragstart', (e) => {
-      dragSourceId = model.id;
-      item.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', model.id);
-    });
-    
-    item.addEventListener('dragend', (e) => {
-      item.classList.remove('dragging');
-      document.querySelectorAll('.scene-item').forEach(el => el.classList.remove('drag-over'));
-      dragSourceId = null;
-    });
-    
-    item.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      document.querySelectorAll('.scene-item').forEach(el => el.classList.remove('drag-over'));
-      if (item.dataset.modelId !== dragSourceId) {
-        item.classList.add('drag-over');
-      }
-    });
-    
-    item.addEventListener('dragleave', (e) => {
-      item.classList.remove('drag-over');
-    });
-    
-    item.addEventListener('drop', (e) => {
-      e.preventDefault();
-      item.classList.remove('drag-over');
+    // Drag-and-drop только для обычных изделий
+    if (!model.isTop) {
+      item.addEventListener('dragstart', (e) => {
+        dragSourceId = model.id;
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', model.id);
+      });
       
-      const sourceId = parseInt(e.dataTransfer.getData('text/plain'));
-      const targetId = model.id;
+      item.addEventListener('dragend', (e) => {
+        item.classList.remove('dragging');
+        document.querySelectorAll('.scene-item').forEach(el => el.classList.remove('drag-over'));
+        dragSourceId = null;
+      });
       
-      if (sourceId === targetId) return;
+      item.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        document.querySelectorAll('.scene-item').forEach(el => el.classList.remove('drag-over'));
+        if (item.dataset.modelId !== dragSourceId) {
+          item.classList.add('drag-over');
+        }
+      });
       
-      const sourceIndex = sceneModels.findIndex(m => m.id === sourceId);
-      const targetIndex = sceneModels.findIndex(m => m.id === targetId);
+      item.addEventListener('dragleave', (e) => {
+        item.classList.remove('drag-over');
+      });
       
-      if (sourceIndex === -1 || targetIndex === -1) return;
-      
-      const [movedItem] = sceneModels.splice(sourceIndex, 1);
-      sceneModels.splice(targetIndex, 0, movedItem);
-      
-      recalculateRegularModelsPositions();
-      updateSceneListUI();
-    });
+      item.addEventListener('drop', (e) => {
+        e.preventDefault();
+        item.classList.remove('drag-over');
+        
+        const sourceId = parseInt(e.dataTransfer.getData('text/plain'));
+        const targetId = model.id;
+        
+        if (sourceId === targetId) return;
+        
+        const sourceIndex = sceneModels.findIndex(m => m.id === sourceId);
+        const targetIndex = sceneModels.findIndex(m => m.id === targetId);
+        
+        if (sourceIndex === -1 || targetIndex === -1) return;
+        
+        const sourceModel = sceneModels[sourceIndex];
+        
+        // Собираем все элементы для перемещения: источник + его антресоль (если есть)
+        const itemsToMove = [sourceModel];
+        const topModel = sceneModels.find(m => m.isTop && m.parentModel === sourceModel);
+        if (topModel) itemsToMove.push(topModel);
+        
+        // Удаляем все перемещаемые элементы из массива
+        itemsToMove.forEach(item => {
+          const idx = sceneModels.findIndex(m => m.id === item.id);
+          if (idx !== -1) sceneModels.splice(idx, 1);
+        });
+        
+        // Вставляем после целевого элемента (и его антресоли, если есть)
+        let insertIndex = sceneModels.findIndex(m => m.id === targetId);
+        const targetTopModel = sceneModels.find(m => m.isTop && m.parentModel === model);
+        if (targetTopModel) {
+          const topIdx = sceneModels.findIndex(m => m.id === targetTopModel.id);
+          insertIndex = topIdx + 1;
+        } else {
+          insertIndex = insertIndex + 1;
+        }
+        
+        itemsToMove.forEach((item, idx) => {
+          sceneModels.splice(insertIndex + idx, 0, item);
+        });
+        
+        recalculateRegularModelsPositions();
+        updateSceneListUI();
+      });
+    }
     
     container.appendChild(item);
   });
