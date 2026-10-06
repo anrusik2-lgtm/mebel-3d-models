@@ -448,19 +448,16 @@ document.getElementById('search-input').addEventListener('input', (e) => {
 function recalculateRegularModelsPositions() {
   const regularModels = sceneModels.filter(m => !m.isTop);
   
-  let currentX = 0;
   regularModels.forEach((model, index) => {
     if (index === 0) {
-      currentX = 0;
+      model.group.position.x = 0;
     } else {
-      // Используем сохранённую "чистую" ширину предыдущей модели
       const prevModel = regularModels[index - 1];
-      const prevWidth = prevModel.cleanWidth || 0;
-      currentX = prevModel.group.position.x + prevWidth + rulerSettings.spacing;
+      const prevBox = new THREE.Box3().setFromObject(prevModel.group);
+      // Левый край текущей модели = правый край предыдущей + отступ
+      model.group.position.x = prevBox.max.x + rulerSettings.spacing - model.cleanMinX;
     }
-    model.group.position.x = currentX;
     
-    // Антресоли следуют за родителем
     const topModels = sceneModels.filter(m => m.isTop && m.parentModel === model);
     topModels.forEach(topModel => {
       if (topModel.relativeOffset) {
@@ -483,9 +480,11 @@ function processAndAddModel(gltf, modelName, addOnTop){
   scene.add(group);
   group.updateMatrixWorld(true);
   
-  // ИСПРАВЛЕНИЕ: вычисляем "чистую" ширину модели сразу после добавления
-  const cleanBox = new THREE.Box3().setFromObject(group);
-  const cleanWidth = cleanBox.max.x - cleanBox.min.x;
+// Вычисляем "чистые" границы модели при позиции (0,0,0)
+const cleanBox = new THREE.Box3().setFromObject(group);
+const cleanMinX = cleanBox.min.x;
+const cleanMaxX = cleanBox.max.x;
+const cleanWidth = cleanMaxX - cleanMinX;
   
   let offsetX = 0, offsetY = 0, offsetZ = 0;
 
@@ -577,31 +576,35 @@ function processAndAddModel(gltf, modelName, addOnTop){
     return;
   }
   
-  if (regularModels.length > 0) {
-    const lastModel = regularModels[regularModels.length - 1];
-    const lastBox = new THREE.Box3().setFromObject(lastModel.group);
-    
-    // Правый край последней модели + половина ширины новой модели + отступ
-    offsetX = lastBox.max.x + (cleanWidth / 2) + rulerSettings.spacing;
-  } else {
-    offsetX = 0;
-    offsetY = 0;
-    offsetZ = 0;
-  }
+if (regularModels.length > 0) {
+  const lastModel = regularModels[regularModels.length - 1];
+  const lastBox = new THREE.Box3().setFromObject(lastModel.group);
+  
+  // Левый край новой модели должен быть на расстоянии spacing от правого края последней
+  // Левый край новой = group.position.x + cleanMinX
+  // Значит: group.position.x = lastBox.max.x + spacing - cleanMinX
+  offsetX = lastBox.max.x + rulerSettings.spacing - cleanMinX;
+} else {
+  offsetX = 0;
+  offsetY = 0;
+  offsetZ = 0;
+}
   
   group.position.set(offsetX, offsetY, offsetZ);
   group.updateMatrixWorld(true);
   
-  const modelEntry = {
-    id: nextModelId++,
-    name: modelName,
-    group: group,
-    meshes: [],
-    isTop: false,
-    parentModel: null,
-    relativeOffset: null,
-    cleanWidth: cleanWidth
-  };
+const modelEntry = {
+  id: nextModelId++,
+  name: modelName,
+  group: group,
+  meshes: [],
+  isTop: false,
+  parentModel: null,
+  relativeOffset: null,
+  cleanMinX: cleanMinX,
+  cleanMaxX: cleanMaxX,
+  cleanWidth: cleanWidth
+};
     
     group.traverse((child) => {
       if(child.isMesh){
