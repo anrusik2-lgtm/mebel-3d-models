@@ -569,40 +569,39 @@ function processAndAddModel(gltf, modelName, addOnTop){
     updateSceneListUI();
     fitCameraToScene();
     
+} else {
+  const regularModels = sceneModels.filter(m => !m.isTop);
+  if (regularModels.length >= MAX_REGULAR) {
+    scene.remove(group);
+    alert(`Можно добавить максимум ${MAX_REGULAR} обычных изделий.`);
+    return;
+  }
+  
+  if (regularModels.length > 0) {
+    const lastModel = regularModels[regularModels.length - 1];
+    const lastBox = new THREE.Box3().setFromObject(lastModel.group);
+    
+    // Правый край последней модели + половина ширины новой модели + отступ
+    offsetX = lastBox.max.x + (cleanWidth / 2) + rulerSettings.spacing;
   } else {
-    const regularModels = sceneModels.filter(m => !m.isTop);
-    if (regularModels.length >= MAX_REGULAR) {
-      scene.remove(group);
-      alert(`Можно добавить максимум ${MAX_REGULAR} обычных изделий.`);
-      return;
-    }
-    
-    if (regularModels.length > 0) {
-      // ИСПРАВЛЕНИЕ: используем сохранённую чистую ширину последней модели
-      const lastModel = regularModels[regularModels.length - 1];
-      const lastWidth = lastModel.cleanWidth || 0;
-      const lastPos = lastModel.group.position.x;
-      
-      offsetX = lastPos + lastWidth + rulerSettings.spacing;
-    } else {
-      offsetX = 0;
-      offsetY = 0;
-      offsetZ = 0;
-    }
-    
-    group.position.set(offsetX, offsetY, offsetZ);
-    group.updateMatrixWorld(true);
-    
-    const modelEntry = {
-      id: nextModelId++,
-      name: modelName,
-      group: group,
-      meshes: [],
-      isTop: false,
-      parentModel: null,
-      relativeOffset: null,
-      cleanWidth: cleanWidth
-    };
+    offsetX = 0;
+    offsetY = 0;
+    offsetZ = 0;
+  }
+  
+  group.position.set(offsetX, offsetY, offsetZ);
+  group.updateMatrixWorld(true);
+  
+  const modelEntry = {
+    id: nextModelId++,
+    name: modelName,
+    group: group,
+    meshes: [],
+    isTop: false,
+    parentModel: null,
+    relativeOffset: null,
+    cleanWidth: cleanWidth
+  };
     
     group.traverse((child) => {
       if(child.isMesh){
