@@ -8,9 +8,14 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 #sidebar{position:absolute;left:0;top:0;width:250px;height:100vh;background:white;box-shadow:2px 0 10px rgba(0,0,0,0.1);display:flex;flex-direction:column;z-index:100}
-#sidebar-header{padding:12px 15px;background:#0044cc;color:white; display:flex; justify-content:space-between; align-items:center;}
+#sidebar-header{padding:12px 15px;background:#0044cc;color:white; display:flex; flex-direction:column; gap:6px;}
+#mode-switcher{font-size:11px; text-align:center;}
+#mode-switcher a{color:rgba(255,255,255,0.6); text-decoration:none; cursor:pointer; transition:0.2s;}
+#mode-switcher a:hover{color:white;}
+#mode-switcher a.active{color:white; font-weight:bold; text-decoration:underline;}
+#mode-switcher .sep{color:rgba(255,255,255,0.4); margin:0 4px;}
 #sidebar-header h1{font-size:14px;font-weight:bold}
-#help-btn{background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.5); color:white; width:28px; height:28px; border-radius:50%; font-size:16px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;}
+#help-btn{background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.5); color:white; width:28px; height:28px; border-radius:50%; font-size:16px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; align-self:flex-end;}
 #help-btn:hover{background:white; color:#0044cc;}
 
 #search-box{padding:10px 15px;border-bottom:1px solid #ddd}
@@ -145,6 +150,21 @@ kbd {
 }
 .settings-value { display: inline-block; margin-left: 10px; color: #0044cc; font-weight: bold; }
 
+/* === РЕЖИМЫ === */
+/* Обычный режим: скрываем лишнее */
+body.mode-basic .add-top-btn { display: none; }
+body.mode-basic #scene-list-container { display: none; }
+body.mode-basic #ruler-btn,
+body.mode-basic #ruler-settings-btn,
+body.mode-basic #clear-rulers-btn { display: none; }
+
+/* Расширенный режим: показываем всё */
+body.mode-advanced .add-top-btn { display: flex; }
+body.mode-advanced #scene-list-container { display: block; }
+body.mode-advanced #ruler-btn,
+body.mode-advanced #ruler-settings-btn,
+body.mode-advanced #clear-rulers-btn { display: inline-flex; }
+
 @media (max-width: 600px) {
   .modal-content { padding: 18px; width: 95%; }
   .instruction-list li { font-size: 12px; margin-bottom: 10px; }
@@ -161,12 +181,19 @@ kbd {
 }
 </script>
 </head>
-<body>
+<body class="mode-basic">
 
 <div id="sidebar">
   <div id="sidebar-header">
-    <h1>Каталог моделей</h1>
-    <button id="help-btn" title="Показать инструкцию">?</button>
+    <div id="mode-switcher">
+      <a id="link-basic" class="active">Обычный</a>
+      <span class="sep">/</span>
+      <a id="link-advanced">Расширенный</a>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+      <h1>Каталог моделей</h1>
+      <button id="help-btn" title="Показать инструкцию">?</button>
+    </div>
   </div>
   <div id="search-box"><input type="text" id="search-input" placeholder="Поиск модели..."></div>
   <div id="model-list">
@@ -208,7 +235,7 @@ kbd {
   
   <button id="reset-btn">Вернуть материал</button>
   <div class="ruler-controls">
-    <button id="ruler-btn"> Линейка (выкл)</button>
+    <button id="ruler-btn">📏 Линейка (выкл)</button>
     <button id="ruler-settings-btn" title="Настройки">⚙️</button>
   </div>
   <button id="screenshot-btn">Скачать изображение</button>
@@ -219,7 +246,7 @@ kbd {
 <div id="instruction-modal" class="modal-backdrop">
   <div class="modal-content">
     <button class="modal-close" id="close-modal">&times;</button>
-    <h2> Как пользоваться конфигуратором</h2>
+    <h2>📖 Как пользоваться конфигуратором</h2>
     <ul class="instruction-list">
       <li><strong>1. Добавление изделий.</strong> Нажмите синюю кнопку <strong>➕</strong> рядом с моделью в каталоге. Первое изделие появится в центре сцены, каждое следующее добавится справа от предыдущего. Максимум 5 изделий.</li>
       <li><strong>2. Антресоли.</strong> Нажмите зелёную кнопку <strong>со стрелкой вверх</strong> — антресоль автоматически встанет сверху на последнее добавленное изделие, у которого ещё нет антресоли. Максимум 5 антресолей. Антресоль жёстко привязана к своему шкафу.</li>
@@ -227,7 +254,7 @@ kbd {
       <li><strong>4. Выделение деталей.</strong> Кликните <strong>левой кнопкой мыши</strong> по детали на 3D-модели — она подсветится. Зажмите <kbd>Ctrl</kbd> (или <kbd>Cmd</kbd> на Mac) для выделения нескольких деталей. Затем выберите цвет или текстуру на правой панели. Красится только выбранная деталь.</li>
       <li><strong>5. Перестановка изделий.</strong> В списке <strong>«Добавлено в сцену»</strong> зажмите левую кнопку мыши на любом изделии и перетащите его на нужное место. Антресоль перемещается вместе со своим шкафом. Антресоли нельзя перемещать отдельно.</li>
       <li><strong>6. Покраска всего изделия.</strong> Включите галочку «Заменить весь цвет» — цвет применится ко всем деталям сразу. Галочка автоматически снимется после применения.</li>
-      <li><strong>7. Линейка.</strong> Нажмите кнопку <strong>« Линейка»</strong>. Кликните на первую точку модели, затем на вторую. Двигайте мышь в любую сторону — выноска с размером будет следовать за курсором. Кликните третий раз, чтобы зафиксировать размер. Можно ставить сколько угодно линеек из одной точки.</li>
+      <li><strong>7. Линейка.</strong> Нажмите кнопку <strong>«📏 Линейка»</strong>. Кликните на первую точку модели, затем на вторую. Двигайте мышь в любую сторону — выноска с размером будет следовать за курсором. Кликните третий раз, чтобы зафиксировать размер. Можно ставить сколько угодно линеек из одной точки.</li>
       <li><strong>8. Настройки.</strong> Нажмите <strong>⚙️</strong> рядом с кнопкой линейки. Здесь можно настроить размер текста (75–300 px) и расстояние между изделиями (0–200). Изменение расстояния мгновенно переставляет модели на сцене.</li>
       <li><strong>9. Скачать изображение.</strong> Нажмите кнопку «Скачать изображение» — сохранится PNG-снимок текущего вида сцены.</li>
       <li><strong>10. Очистка.</strong> «Очистить сцену» удаляет все модели. «Удалить линейки» убирает только размеры, оставляя модели.</li>
@@ -353,6 +380,26 @@ let rulerSettings = {
   spacing: 0
 };
 
+// === УПРАВЛЕНИЕ РЕЖИМАМИ ===
+let currentMode = 'basic'; // 'basic' или 'advanced'
+
+function setMode(mode) {
+  currentMode = mode;
+  document.body.className = mode === 'basic' ? 'mode-basic' : 'mode-advanced';
+  document.getElementById('link-basic').classList.toggle('active', mode === 'basic');
+  document.getElementById('link-advanced').classList.toggle('active', mode === 'advanced');
+}
+
+document.getElementById('link-basic').addEventListener('click', (e) => {
+  e.preventDefault();
+  setMode('basic');
+});
+
+document.getElementById('link-advanced').addEventListener('click', (e) => {
+  e.preventDefault();
+  setMode('advanced');
+});
+
 function initScene(){
   const viewport = document.getElementById('viewport');
   scene = new THREE.Scene();
@@ -413,7 +460,7 @@ function renderModelsList(models){
     div.innerHTML = `
       <h3>${model.name}</h3>
       <div class="model-buttons">
-        <button class="add-model-btn" title="Добавить изделие">➕</button>
+        <button class="add-model-btn" title="Добавить изделие"></button>
         <button class="add-top-btn" title="Добавить антресоль">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M8 3L13 9H3L8 3Z" fill="white"/>
@@ -445,7 +492,6 @@ document.getElementById('search-input').addEventListener('input', (e) => {
   ));
 });
 
-// Пересчёт позиций с использованием СОХРАНЁННЫХ границ моделей
 function recalculateRegularModelsPositions() {
   const regularModels = sceneModels.filter(m => !m.isTop);
   
@@ -455,11 +501,9 @@ function recalculateRegularModelsPositions() {
     } else {
       const prevModel = regularModels[index - 1];
       const prevBox = new THREE.Box3().setFromObject(prevModel.group);
-      // Левый край текущей модели = правый край предыдущей + отступ
       model.group.position.x = prevBox.max.x + rulerSettings.spacing - model.cleanMinX;
     }
     
-    // Антресоли жёстко следуют за родителем
     const topModels = sceneModels.filter(m => m.isTop && m.parentModel === model);
     topModels.forEach(topModel => {
       if (topModel.relativeOffset) {
@@ -482,7 +526,6 @@ function processAndAddModel(gltf, modelName, addOnTop){
   scene.add(group);
   group.updateMatrixWorld(true);
   
-  // Вычисляем "чистые" границы модели
   const cleanBox = new THREE.Box3().setFromObject(group);
   const cleanMinX = cleanBox.min.x;
   const cleanMaxX = cleanBox.max.x;
@@ -532,7 +575,6 @@ function processAndAddModel(gltf, modelName, addOnTop){
     group.position.set(offsetX, offsetY, offsetZ);
     group.updateMatrixWorld(true);
     
-    // ИСПРАВЛЕНИЕ: relativeOffset теперь = позиция антресоли - позиция родителя
     const modelEntry = {
       id: nextModelId++,
       name: modelName,
@@ -588,8 +630,6 @@ function processAndAddModel(gltf, modelName, addOnTop){
     if (regularModels.length > 0) {
       const lastModel = regularModels[regularModels.length - 1];
       const lastBox = new THREE.Box3().setFromObject(lastModel.group);
-      
-      // Левый край новой модели = правый край последней + отступ
       offsetX = lastBox.max.x + rulerSettings.spacing - cleanMinX;
     } else {
       offsetX = 0;
@@ -695,7 +735,6 @@ function removeModelFromScene(id){
   
   const model = sceneModels[index];
   
-  // Если удаляем обычный шкаф — удаляем и его антресоль
   if (!model.isTop) {
     const topModel = sceneModels.find(m => m.isTop && m.parentModel === model);
     if (topModel) {
@@ -765,7 +804,6 @@ function updateSceneListUI(){
     item.className = 'scene-item' + (model.isTop ? ' top-item' : '');
     item.dataset.modelId = model.id;
     
-    // Антресоли нельзя перетаскивать отдельно
     if (!model.isTop) {
       item.draggable = true;
     }
@@ -779,7 +817,7 @@ function updateSceneListUI(){
     nameSpan.textContent = model.name + (model.isTop ? ' (антресоль)' : '');
     
     const removeBtn = document.createElement('button');
-    removeBtn.textContent = '';
+    removeBtn.textContent = '✕';
     removeBtn.title = 'Удалить из сцены';
     removeBtn.onmouseover = () => removeBtn.style.background = '#cc0000';
     removeBtn.onmouseout = () => removeBtn.style.background = '#ff4444';
@@ -791,7 +829,6 @@ function updateSceneListUI(){
     item.appendChild(nameSpan);
     item.appendChild(removeBtn);
     
-    // Drag-and-drop только для обычных изделий
     if (!model.isTop) {
       item.addEventListener('dragstart', (e) => {
         dragSourceId = model.id;
@@ -835,18 +872,15 @@ function updateSceneListUI(){
         
         const sourceModel = sceneModels[sourceIndex];
         
-        // Собираем все элементы для перемещения: источник + его антресоль (если есть)
         const itemsToMove = [sourceModel];
         const topModel = sceneModels.find(m => m.isTop && m.parentModel === sourceModel);
         if (topModel) itemsToMove.push(topModel);
         
-        // Удаляем все перемещаемые элементы из массива
         itemsToMove.forEach(item => {
           const idx = sceneModels.findIndex(m => m.id === item.id);
           if (idx !== -1) sceneModels.splice(idx, 1);
         });
         
-        // Вставляем после целевого элемента (и его антресоли, если есть)
         let insertIndex = sceneModels.findIndex(m => m.id === targetId);
         const targetTopModel = sceneModels.find(m => m.isTop && m.parentModel === model);
         if (targetTopModel) {
@@ -1240,7 +1274,7 @@ rulerBtn.addEventListener('click', () => {
     rulerBtn.classList.add('active');
     controls.enabled = false;
   } else {
-    rulerBtn.textContent = ' Линейка (выкл)';
+    rulerBtn.textContent = '📏 Линейка (выкл)';
     rulerBtn.classList.remove('active');
     controls.enabled = true;
     clearRuler();
