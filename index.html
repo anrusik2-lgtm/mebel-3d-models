@@ -444,21 +444,23 @@ document.getElementById('search-input').addEventListener('input', (e) => {
   ));
 });
 
+// Пересчёт позиций с использованием СОХРАНЁННОЙ ширины каждой модели
 function recalculateRegularModelsPositions() {
   const regularModels = sceneModels.filter(m => !m.isTop);
   
+  let currentX = 0;
   regularModels.forEach((model, index) => {
     if (index === 0) {
-      model.group.position.x = 0;
+      currentX = 0;
     } else {
+      // Используем сохранённую "чистую" ширину предыдущей модели
       const prevModel = regularModels[index - 1];
-      const prevBox = new THREE.Box3().setFromObject(prevModel.group);
-      const prevWidth = prevBox.max.x - prevBox.min.x;
-      const prevPos = prevModel.group.position.x;
-      const currentX = prevPos + prevWidth + rulerSettings.spacing;
-      model.group.position.x = currentX;
+      const prevWidth = prevModel.cleanWidth || 0;
+      currentX = prevModel.group.position.x + prevWidth + rulerSettings.spacing;
     }
+    model.group.position.x = currentX;
     
+    // Антресоли следуют за родителем
     const topModels = sceneModels.filter(m => m.isTop && m.parentModel === model);
     topModels.forEach(topModel => {
       if (topModel.relativeOffset) {
@@ -480,6 +482,10 @@ function processAndAddModel(gltf, modelName, addOnTop){
   group.position.set(0, 0, 0);
   scene.add(group);
   group.updateMatrixWorld(true);
+  
+  // ИСПРАВЛЕНИЕ: вычисляем "чистую" ширину модели сразу после добавления
+  const cleanBox = new THREE.Box3().setFromObject(group);
+  const cleanWidth = cleanBox.max.x - cleanBox.min.x;
   
   let offsetX = 0, offsetY = 0, offsetZ = 0;
 
@@ -532,7 +538,8 @@ function processAndAddModel(gltf, modelName, addOnTop){
       meshes: [],
       isTop: true,
       parentModel: targetModel,
-      relativeOffset: { x: offsetX, y: offsetY, z: offsetZ }
+      relativeOffset: { x: offsetX, y: offsetY, z: offsetZ },
+      cleanWidth: cleanWidth
     };
     
     group.traverse((child) => {
@@ -571,12 +578,12 @@ function processAndAddModel(gltf, modelName, addOnTop){
     }
     
     if (regularModels.length > 0) {
+      // ИСПРАВЛЕНИЕ: используем сохранённую чистую ширину последней модели
       const lastModel = regularModels[regularModels.length - 1];
-      const lastBox = new THREE.Box3().setFromObject(lastModel.group);
-      const newBox = new THREE.Box3().setFromObject(group);
-      const newWidth = newBox.max.x - newBox.min.x;
+      const lastWidth = lastModel.cleanWidth || 0;
+      const lastPos = lastModel.group.position.x;
       
-      offsetX = lastBox.max.x + newWidth + rulerSettings.spacing;
+      offsetX = lastPos + lastWidth + rulerSettings.spacing;
     } else {
       offsetX = 0;
       offsetY = 0;
@@ -593,7 +600,8 @@ function processAndAddModel(gltf, modelName, addOnTop){
       meshes: [],
       isTop: false,
       parentModel: null,
-      relativeOffset: null
+      relativeOffset: null,
+      cleanWidth: cleanWidth
     };
     
     group.traverse((child) => {
@@ -716,7 +724,6 @@ function fitCameraToScene(){
   controls.update();
 }
 
-// === DRAG-AND-DROP В СПИСКЕ СЦЕНЫ ===
 let dragSourceId = null;
 
 function updateSceneListUI(){
@@ -734,7 +741,7 @@ function updateSceneListUI(){
     const item = document.createElement('div');
     item.className = 'scene-item';
     item.dataset.modelId = model.id;
-    item.draggable = true; // Разрешаем перетаскивание
+    item.draggable = true;
     
     const nameSpan = document.createElement('span');
     nameSpan.style.flex = '1';
@@ -757,7 +764,6 @@ function updateSceneListUI(){
     item.appendChild(nameSpan);
     item.appendChild(removeBtn);
     
-    // === DRAG-AND-DROP ОБРАБОТЧИКИ ===
     item.addEventListener('dragstart', (e) => {
       dragSourceId = model.id;
       item.classList.add('dragging');
@@ -774,11 +780,7 @@ function updateSceneListUI(){
     item.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      
-      // Убираем подсветку со всех элементов
       document.querySelectorAll('.scene-item').forEach(el => el.classList.remove('drag-over'));
-      
-      // Подсвечиваем элемент, над которым сейчас курсор
       if (item.dataset.modelId !== dragSourceId) {
         item.classList.add('drag-over');
       }
@@ -797,17 +799,14 @@ function updateSceneListUI(){
       
       if (sourceId === targetId) return;
       
-      // Находим индексы в массиве sceneModels
       const sourceIndex = sceneModels.findIndex(m => m.id === sourceId);
       const targetIndex = sceneModels.findIndex(m => m.id === targetId);
       
       if (sourceIndex === -1 || targetIndex === -1) return;
       
-      // Перемещаем элемент в массиве
       const [movedItem] = sceneModels.splice(sourceIndex, 1);
       sceneModels.splice(targetIndex, 0, movedItem);
       
-      // Пересчитываем позиции на сцене
       recalculateRegularModelsPositions();
       updateSceneListUI();
     });
@@ -1187,7 +1186,7 @@ rulerBtn.addEventListener('click', () => {
     rulerBtn.classList.add('active');
     controls.enabled = false;
   } else {
-    rulerBtn.textContent = '📏 Линейка (выкл)';
+    rulerBtn.textContent = ' Линейка (выкл)';
     rulerBtn.classList.remove('active');
     controls.enabled = true;
     clearRuler();
