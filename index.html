@@ -70,6 +70,7 @@ body.mode-advanced #controls-bar{display:flex;}
 .ctrl-btn.secondary{background: #f0f0f0; color: #333; border: 1px solid #ccc;}
 .ctrl-btn.secondary:hover{background: #e0e0e0;}
 .ctrl-btn.icon-btn{padding:8px 12px; font-size:18px;}
+.ctrl-btn.active{background: #28a745; color: white;}
 
 #settings-panel{
   position:absolute;right:10px;top:60px;width:240px;background:white;
@@ -223,6 +224,7 @@ kbd {
   
   <div id="controls-bar">
     <button id="view-toggle-btn" class="ctrl-btn secondary">🔄 Вид сверху</button>
+    <button id="ruler-btn" class="ctrl-btn secondary">📏 Линейка (выкл)</button>
     <button id="settings-btn" class="ctrl-btn icon-btn" title="Настройки комнаты">⚙️</button>
   </div>
 
@@ -253,14 +255,14 @@ kbd {
 <div id="instruction-modal" class="modal-backdrop">
   <div class="modal-content">
     <button class="modal-close" id="close-modal">&times;</button>
-    <h2> Как пользоваться конфигуратором</h2>
+    <h2>📖 Как пользоваться конфигуратором</h2>
     <ul class="instruction-list">
-      <li><strong>Обычный режим.</strong> Кликните по модели в каталоге — она появится на сцене. Выделите деталь кликом и выберите цвет справа. Можно добавить только 1 изделие.</li>
-      <li><strong>Расширенный режим — расстановка.</strong> Кликните по модели — она появится в центре сцены. Зажмите <strong>левую кнопку мыши</strong> на изделии и перетащите в нужное место. Для поворота выделите изделие и нажмите <strong>правую кнопку мыши</strong> или клавишу <kbd>R</kbd>.</li>
-      <li><strong>Антресоли.</strong> Включите кнопку «🧲 Режим: Антресоль» и кликните по модели — она автоматически встанет сверху на ближайший шкаф.</li>
-      <li><strong>Раскраска.</strong> Переключитесь в аксонометрию кнопкой «🔄». Выделите деталь (или несколько с зажатым <kbd>Ctrl</kbd>) и выберите цвет.</li>
-      <li><strong>Настройки комнаты.</strong> Нажмите ⚙️ вверху сцены, чтобы изменить цвет пола, стен и яркость освещения.</li>
-      <li><strong>Сохранение.</strong> Нажмите «Скачать изображение» для PNG-снимка.</li>
+      <li><strong>Обычный режим.</strong> Кликните по модели — она появится в центре. Выделите деталь и выберите цвет. Камера приближена для удобного просмотра.</li>
+      <li><strong>Расширенный режим.</strong> Кликните по модели — она появится с поворотом 180°. Зажмите <strong>левую кнопку мыши</strong> для перемещения. Для поворота выделите изделие и нажмите <strong>правую кнопку мыши</strong> или клавишу <kbd>R</kbd>.</li>
+      <li><strong>Антресоли.</strong> Включите «🧲 Режим: Антресоль» перед кликом — модель примагнитится к верху ближайшего шкафа.</li>
+      <li><strong>Раскраска.</strong> Выделите деталь (или несколько с <kbd>Ctrl</kbd>). Если включить «Заменить весь цвет», перекрасятся все детали <strong>только выбранных изделий</strong>, а не всей сцены.</li>
+      <li><strong>Линейка.</strong> Нажмите «📏 Линейка». Кликните на первую точку, затем на вторую. Двигайте мышь для настройки выноски, кликните для фиксации.</li>
+      <li><strong>Настройки.</strong> Нажмите ⚙️ для изменения цвета стен/пола, яркости света (100-300%) и размера текста линейки.</li>
     </ul>
     <div class="modal-note">
       💡 <em>Детали _NON не окрашиваются. Детали _FAN — только из вкладки «Покраска».</em>
@@ -272,7 +274,7 @@ kbd {
 <div id="room-settings-modal" class="modal-backdrop">
   <div class="modal-content">
     <button class="modal-close" id="close-room-settings">&times;</button>
-    <h2>️ Настройки комнаты</h2>
+    <h2>⚙️ Настройки комнаты</h2>
     <div class="settings-group">
       <label>Цвет пола: <input type="color" id="floor-color-picker" value="#ffffff"></label>
     </div>
@@ -280,8 +282,13 @@ kbd {
       <label>Цвет стен: <input type="color" id="wall-color-picker" value="#ffffff"></label>
     </div>
     <div class="settings-group">
-      <label>Яркость света: <span class="settings-value" id="light-value">80</span>%
-        <input type="range" id="light-slider" min="20" max="150" value="80">
+      <label>Яркость света: <span class="settings-value" id="light-value">100</span>%
+        <input type="range" id="light-slider" min="100" max="300" value="100">
+      </label>
+    </div>
+    <div class="settings-group">
+      <label>Размер текста линейки: <span class="settings-value" id="font-size-value">120</span>px
+        <input type="range" id="font-size-slider" min="50" max="300" value="120">
       </label>
     </div>
     <button class="modal-ok-btn" id="apply-room-settings">Применить</button>
@@ -296,7 +303,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const MODELS_URL = 'models/models.json';
 const RAW_BASE = 'models/';
 
-const ROOM_SIZE = 10000;
+const ROOM_SIZE = 3000;
 const WALL_HEIGHT = 3000;
 const WALL_THICKNESS = 50;
 
@@ -372,12 +379,24 @@ let isTopView = false;
 let isAntresoleMode = false;
 
 let floorMesh, wallLeftMesh, wallRightMesh;
-let dirLight, ambientLight;
+let dirLight, leftLight, rightLight, ambientLight;
 
 let isDragging = false;
 let dragObject = null;
 let dragOffset = new THREE.Vector3();
-let dragPreviousPosition = new THREE.Vector3();
+
+// Линейка
+let rulerMode = false;
+let rulerState = 'waiting_first';
+let rulerFirstPoint = null;
+let rulerSecondPoint = null;
+let rulerOffsetDistance = 0;
+let rulerGroup = null;
+let snapMarker = null;
+let allRulerGroups = [];
+const SNAP_DISTANCE = 15;
+let fixedPerpDir = null;
+let rulerSettings = { fontSize: 120, labelWidth: 960, labelHeight: 240 };
 
 function setMode(mode) {
   currentMode = mode;
@@ -428,17 +447,15 @@ function initScene(){
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xffffff);
 
-  // Пол
   const floorGeo = new THREE.BoxGeometry(ROOM_SIZE, 10, ROOM_SIZE);
   const floorMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
   floorMesh = new THREE.Mesh(floorGeo, floorMat);
   floorMesh.position.set(ROOM_SIZE/2, -5, ROOM_SIZE/2);
   floorMesh.receiveShadow = true;
   floorMesh.name = "floor";
-  floorMesh.visible = false; // Скрыт в обычном режиме
+  floorMesh.visible = false;
   scene.add(floorMesh);
 
-  // Левая стена
   const wallLeftGeo = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, ROOM_SIZE);
   const wallMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
   wallLeftMesh = new THREE.Mesh(wallLeftGeo, wallMat);
@@ -447,7 +464,6 @@ function initScene(){
   wallLeftMesh.visible = false;
   scene.add(wallLeftMesh);
 
-  // Правая стена
   const wallRightGeo = new THREE.BoxGeometry(ROOM_SIZE, WALL_HEIGHT, WALL_THICKNESS);
   wallRightMesh = new THREE.Mesh(wallRightGeo, wallMat);
   wallRightMesh.position.set(ROOM_SIZE/2, WALL_HEIGHT/2, WALL_THICKNESS/2);
@@ -464,34 +480,55 @@ function initScene(){
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // Освещение
-  ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  // Освещение: яркость 80 (0.8) для равномерного освещения со всех сторон
+  ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
   scene.add(ambientLight);
   
-  dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(ROOM_SIZE/2, 8000, ROOM_SIZE/2); // Свет идёт точно в угол
-  dirLight.target.position.set(ROOM_SIZE/2, 0, ROOM_SIZE/2);
+  // Свет сверху-в-угол
+  dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  dirLight.position.set(ROOM_SIZE / 2, 4000, ROOM_SIZE / 2);
+  dirLight.target.position.set(ROOM_SIZE / 2, 0, ROOM_SIZE / 2);
   scene.add(dirLight);
   scene.add(dirLight.target);
+
+  // Свет вдоль левой стены
+  leftLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  leftLight.position.set(100, 2000, ROOM_SIZE / 2);
+  leftLight.target.position.set(ROOM_SIZE / 2, 1000, ROOM_SIZE / 2);
+  scene.add(leftLight);
+  scene.add(leftLight.target);
+
+  // Свет вдоль правой стены
+  rightLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  rightLight.position.set(ROOM_SIZE - 100, 2000, ROOM_SIZE / 2);
+  rightLight.target.position.set(ROOM_SIZE / 2, 1000, ROOM_SIZE / 2);
+  scene.add(rightLight);
+  scene.add(rightLight.target);
 
   updateCameraView();
   animate();
 }
 
 function updateCameraView() {
-  if (isTopView) {
-    camera.position.set(ROOM_SIZE/2, 12000, ROOM_SIZE/2);
+  if (currentMode === 'basic') {
+    // Обычный режим: камера ближе к изделию (0,0,0)
+    camera.position.set(1500, 1500, 1500);
+    camera.lookAt(0, 500, 0);
+    controls.target.set(0, 500, 0);
+    controls.enableRotate = true;
+  } else if (isTopView) {
+    camera.position.set(ROOM_SIZE/2, 5000, ROOM_SIZE/2);
     camera.lookAt(ROOM_SIZE/2, 0, ROOM_SIZE/2);
     controls.target.set(ROOM_SIZE/2, 0, ROOM_SIZE/2);
     controls.enableRotate = false;
-    controls.update();
   } else {
-    camera.position.set(ROOM_SIZE/2 + 4000, 4000, ROOM_SIZE/2 + 4000);
+    // Аксонометрия
+    camera.position.set(ROOM_SIZE/2 + 2500, 3000, ROOM_SIZE/2 + 2500);
     camera.lookAt(ROOM_SIZE/2, 1000, ROOM_SIZE/2);
     controls.target.set(ROOM_SIZE/2, 1000, ROOM_SIZE/2);
     controls.enableRotate = true;
-    controls.update();
   }
+  controls.update();
 }
 
 initScene();
@@ -555,7 +592,13 @@ function addModelToScene(model, addOnTop){
     (gltf) => {
       const group = gltf.scene;
       
-      group.position.set(ROOM_SIZE/2, 0, ROOM_SIZE/2);
+      if (currentMode === 'basic') {
+        group.position.set(0, 0, 0);
+      } else {
+        group.position.set(ROOM_SIZE/2, 0, ROOM_SIZE/2);
+        // Поворот на 180 градусов при установке в расширенном режиме
+        group.rotation.y = Math.PI;
+      }
       
       scene.add(group);
       group.updateMatrixWorld(true);
@@ -602,7 +645,7 @@ function addModelToScene(model, addOnTop){
       hideLoading();
       
       if (currentMode === 'advanced') {
-        showTooltip('💡 Зажмите левую кнопку мыши на изделии — переместить. Выделите и нажмите правую кнопку мыши или R — повернуть');
+        showTooltip('💡 Зажмите левую кнопку мыши — переместить. Выделите и нажмите правую кнопку мыши или R — повернуть');
         setTimeout(() => hideTooltip(), 5000);
       }
     },
@@ -649,15 +692,14 @@ function snapToCabinet(antresoleGroup) {
 
 function checkCollision(movingGroup, excludeId) {
   const movingBox = new THREE.Box3().setFromObject(movingGroup);
-  // Немного уменьшаем box для допуска
-  movingBox.expandByScalar(-10);
+  movingBox.expandByScalar(-5);
   
   for (let model of sceneModels) {
     if (model.id === excludeId) continue;
-    if (model.isTop) continue; // Антресоли не проверяем на коллизии с другими
+    if (model.isTop) continue;
     
     const otherBox = new THREE.Box3().setFromObject(model.group);
-    otherBox.expandByScalar(-10);
+    otherBox.expandByScalar(-5);
     
     if (movingBox.intersectsBox(otherBox)) {
       return true;
@@ -737,8 +779,6 @@ viewport.addEventListener('mousedown', (event) => {
       dragObject = modelEntry;
       controls.enabled = false;
       
-      dragPreviousPosition.copy(modelEntry.group.position);
-      
       const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
       const target = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, target);
@@ -751,43 +791,102 @@ viewport.addEventListener('mousedown', (event) => {
 });
 
 viewport.addEventListener('mousemove', (event) => {
-  if (!isDragging || !dragObject) return;
-  
-  const rect = viewport.getBoundingClientRect();
-  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  if (isDragging && dragObject) {
+    const rect = viewport.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-  raycaster.setFromCamera(mouse, camera);
-  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-  const target = new THREE.Vector3();
-  raycaster.ray.intersectPlane(plane, target);
-  
-  if (target) {
-    const newX = target.x + dragOffset.x;
-    const newZ = target.z + dragOffset.z;
+    raycaster.setFromCamera(mouse, camera);
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const target = new THREE.Vector3();
+    raycaster.ray.intersectPlane(plane, target);
     
-    // Сохраняем текущую позицию для проверки коллизии
-    const oldX = dragObject.group.position.x;
-    const oldZ = dragObject.group.position.z;
-    
-    dragObject.group.position.x = newX;
-    dragObject.group.position.z = newZ;
-    
-    // Проверяем коллизии
-    if (checkCollision(dragObject.group, dragObject.id)) {
-      // Если есть коллизия — возвращаем на предыдущую позицию
-      dragObject.group.position.x = oldX;
-      dragObject.group.position.z = oldZ;
-    } else {
-      // Ограничиваем в пределах комнаты
-      const box = new THREE.Box3().setFromObject(dragObject.group);
-      const size = box.getSize(new THREE.Vector3());
-      dragObject.group.position.x = Math.max(size.x/2 + WALL_THICKNESS, Math.min(ROOM_SIZE - size.x/2, dragObject.group.position.x));
-      dragObject.group.position.z = Math.max(size.z/2 + WALL_THICKNESS, Math.min(ROOM_SIZE - size.z/2, dragObject.group.position.z));
+    if (target) {
+      const newX = target.x + dragOffset.x;
+      const newZ = target.z + dragOffset.z;
+      
+      const oldX = dragObject.group.position.x;
+      const oldZ = dragObject.group.position.z;
+      
+      dragObject.group.position.x = newX;
+      dragObject.group.position.z = newZ;
+      
+      if (checkCollision(dragObject.group, dragObject.id)) {
+        dragObject.group.position.x = oldX;
+        dragObject.group.position.z = oldZ;
+      } else {
+        const box = new THREE.Box3().setFromObject(dragObject.group);
+        const size = box.getSize(new THREE.Vector3());
+        
+        const minX = WALL_THICKNESS + size.x / 2;
+        const maxX = ROOM_SIZE - WALL_THICKNESS - size.x / 2;
+        const minZ = WALL_THICKNESS + size.z / 2;
+        const maxZ = ROOM_SIZE - WALL_THICKNESS - size.z / 2;
+        
+        dragObject.group.position.x = Math.max(minX, Math.min(maxX, dragObject.group.position.x));
+        dragObject.group.position.z = Math.max(minZ, Math.min(maxZ, dragObject.group.position.z));
+      }
+      
+      if (dragObject.isTop) {
+        snapToCabinet(dragObject.group);
+      }
     }
+    return;
+  }
+
+  if (rulerMode) {
+    const rect = viewport.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(allMeshes, true);
     
-    if (dragObject.isTop) {
-      snapToCabinet(dragObject.group);
+    if (intersects.length > 0) {
+      const point = intersects[0].point;
+      const snappedPoint = snapToVertex(point);
+      const finalPoint = snappedPoint || point;
+      
+      if (snapMarker) scene.remove(snapMarker);
+      snapMarker = createMarker(finalPoint, snappedPoint ? 0x00ff00 : 0xffff00, 6);
+      scene.add(snapMarker);
+      
+      if (rulerState === 'waiting_second' && rulerFirstPoint) {
+        if (rulerGroup) scene.remove(rulerGroup);
+        const tempLine = new THREE.Group();
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints([rulerFirstPoint, finalPoint]);
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0044cc, linewidth: 2, depthTest: false });
+        const line = new THREE.Line(lineGeometry, lineMaterial);
+        line.renderOrder = 999;
+        tempLine.add(line);
+        tempLine.add(createMarker(rulerFirstPoint, 0xff0000, 5));
+        tempLine.add(createMarker(finalPoint, 0xff0000, 5));
+        rulerGroup = tempLine;
+        scene.add(rulerGroup);
+        
+      } else if (rulerState === 'waiting_offset' && rulerFirstPoint && rulerSecondPoint && fixedPerpDir) {
+        const midPoint = new THREE.Vector3().addVectors(rulerFirstPoint, rulerSecondPoint).multiplyScalar(0.5);
+        const dir = new THREE.Vector3().subVectors(rulerSecondPoint, rulerFirstPoint).normalize();
+        
+        const plane = new THREE.Plane();
+        plane.setFromNormalAndCoplanarPoint(dir, midPoint);
+        const target = new THREE.Vector3();
+        raycaster.ray.intersectPlane(plane, target);
+        
+        if (target) {
+          const mouseDir = new THREE.Vector3().subVectors(target, midPoint);
+          rulerOffsetDistance = mouseDir.dot(fixedPerpDir);
+        }
+        
+        if (rulerGroup) scene.remove(rulerGroup);
+        rulerGroup = createRulerWithExtension(rulerFirstPoint, rulerSecondPoint, rulerOffsetDistance);
+        scene.add(rulerGroup);
+      }
+    } else {
+      if (snapMarker) {
+        scene.remove(snapMarker);
+        snapMarker = null;
+      }
     }
   }
 });
@@ -802,7 +901,6 @@ viewport.addEventListener('mouseup', () => {
 
 viewport.addEventListener('contextmenu', (e) => {
   e.preventDefault();
-  
   if (currentMode !== 'advanced') return;
   
   if (selectedObjects.length >= 1) {
@@ -852,6 +950,46 @@ viewport.addEventListener('click', (event) => {
   mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
   raycaster.setFromCamera(mouse, camera);
+  
+  if (rulerMode) {
+    const intersects = raycaster.intersectObjects(allMeshes, true);
+    if (intersects.length > 0) {
+      const point = intersects[0].point;
+      const snappedPoint = snapToVertex(point);
+      const finalPoint = snappedPoint || point;
+      
+      if (rulerState === 'waiting_first') {
+        rulerFirstPoint = finalPoint.clone();
+        rulerState = 'waiting_second';
+      } else if (rulerState === 'waiting_second') {
+        rulerSecondPoint = finalPoint.clone();
+        rulerState = 'waiting_offset';
+        rulerOffsetDistance = 50;
+        
+        const midPoint = new THREE.Vector3().addVectors(rulerFirstPoint, rulerSecondPoint).multiplyScalar(0.5);
+        const dir = new THREE.Vector3().subVectors(rulerSecondPoint, rulerFirstPoint).normalize();
+        const cameraDir = new THREE.Vector3().subVectors(camera.position, midPoint).normalize();
+        fixedPerpDir = new THREE.Vector3().crossVectors(dir, cameraDir).normalize();
+      } else if (rulerState === 'waiting_offset') {
+        const rulerData = {
+          startPoint: rulerFirstPoint.clone(),
+          endPoint: rulerSecondPoint.clone(),
+          offsetDistance: rulerOffsetDistance,
+          group: rulerGroup
+        };
+        allRulerGroups.push(rulerData);
+        
+        rulerState = 'waiting_first';
+        rulerFirstPoint = null;
+        rulerSecondPoint = null;
+        rulerOffsetDistance = 0;
+        rulerGroup = null;
+        fixedPerpDir = null;
+      }
+    }
+    return;
+  }
+
   const intersects = raycaster.intersectObjects(allMeshes, true);
 
   allMeshes.forEach(m => {
@@ -915,6 +1053,8 @@ const floorColorPicker = document.getElementById('floor-color-picker');
 const wallColorPicker = document.getElementById('wall-color-picker');
 const lightSlider = document.getElementById('light-slider');
 const lightValue = document.getElementById('light-value');
+const fontSizeSlider = document.getElementById('font-size-slider');
+const fontSizeValue = document.getElementById('font-size-value');
 const applyRoomSettingsBtn = document.getElementById('apply-room-settings');
 
 roomSettingsBtn.addEventListener('click', () => {
@@ -935,26 +1075,30 @@ lightSlider.addEventListener('input', (e) => {
   lightValue.textContent = e.target.value;
 });
 
+fontSizeSlider.addEventListener('input', (e) => {
+  const size = parseInt(e.target.value);
+  fontSizeValue.textContent = size;
+  rulerSettings.fontSize = size;
+  rulerSettings.labelWidth = size * 8;
+  rulerSettings.labelHeight = size * 2;
+});
+
 applyRoomSettingsBtn.addEventListener('click', () => {
   const floorColor = floorColorPicker.value;
   const wallColor = wallColorPicker.value;
   const lightIntensity = parseInt(lightSlider.value) / 100;
   
-  if (floorMesh) {
-    floorMesh.material.color.set(floorColor);
-  }
+  if (floorMesh) floorMesh.material.color.set(floorColor);
   if (wallLeftMesh && wallRightMesh) {
     wallLeftMesh.material.color.set(wallColor);
     wallRightMesh.material.color.set(wallColor);
   }
   
-  if (dirLight) {
-    dirLight.intensity = lightIntensity;
-  }
-  if (ambientLight) {
-    ambientLight.intensity = lightIntensity * 0.6;
-  }
+  if (dirLight) dirLight.intensity = lightIntensity;
+  if (leftLight) leftLight.intensity = lightIntensity * 0.6;
+  if (rightLight) rightLight.intensity = lightIntensity * 0.6;
   
+  updateAllRulers();
   roomSettingsModal.classList.remove('show');
 });
 
@@ -965,12 +1109,27 @@ function applyMaterial(value, category) {
   const applyToAll = applyToAllCheckbox.checked;
   let group = [];
   
-  if(applyToAll){
-    if(allMeshes.length === 0){ alert('Сначала добавьте модель'); return; }
-    group = allMeshes;
+  if (applyToAll) {
+    if (selectedObjects.length === 0) {
+      alert('Сначала выделите хотя бы одну деталь');
+      return;
+    }
+    // Находим все модели, которые содержат выбранные детали
+    const targetModelIds = new Set();
+    selectedObjects.forEach(obj => {
+      const model = sceneModels.find(m => m.meshes.includes(obj));
+      if (model) targetModelIds.add(model.id);
+    });
+    
+    // Собираем все меши только этих моделей
+    sceneModels.forEach(model => {
+      if (targetModelIds.has(model.id)) {
+        group = group.concat(model.meshes);
+      }
+    });
     applyToAllCheckbox.checked = false;
-  }else{
-    if(selectedObjects.length === 0){
+  } else {
+    if (selectedObjects.length === 0) {
       alert('Сначала кликните по детали');
       return;
     }
@@ -1088,6 +1247,166 @@ function switchTab(activeId, contentId){
 document.getElementById('tab-standard').addEventListener('click', () => switchTab('tab-standard', 'standard'));
 document.getElementById('tab-fantasy').addEventListener('click', () => switchTab('tab-fantasy', 'fantasy'));
 document.getElementById('tab-paint').addEventListener('click', () => switchTab('tab-paint', 'paint'));
+
+// Линейка функции
+function createTextSprite(text, position) {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  canvas.width = rulerSettings.labelWidth;
+  canvas.height = rulerSettings.labelHeight;
+  
+  context.fillStyle = 'rgba(0, 68, 204, 0.95)';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  
+  context.fillStyle = 'white';
+  context.font = `bold ${rulerSettings.fontSize}px Arial`;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(text, canvas.width / 2, canvas.height / 2);
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+  const sprite = new THREE.Sprite(material);
+  sprite.position.copy(position);
+  sprite.scale.set(rulerSettings.labelWidth * 0.25, rulerSettings.labelHeight * 0.25, 1);
+  sprite.renderOrder = 999;
+  
+  return sprite;
+}
+
+function createMarker(point, color, size = 3) {
+  const geometry = new THREE.SphereGeometry(size, 16, 16);
+  const material = new THREE.MeshBasicMaterial({ color: color, depthTest: false });
+  const marker = new THREE.Mesh(geometry, material);
+  marker.position.copy(point);
+  marker.renderOrder = 999;
+  return marker;
+}
+
+function snapToVertex(point) {
+  let closestVertex = null;
+  let minDistance = SNAP_DISTANCE;
+  
+  allMeshes.forEach(mesh => {
+    const geometry = mesh.geometry;
+    const position = geometry.attributes.position;
+    const worldMatrix = mesh.matrixWorld;
+    
+    for (let i = 0; i < position.count; i++) {
+      const vertex = new THREE.Vector3().fromBufferAttribute(position, i);
+      vertex.applyMatrix4(worldMatrix);
+      
+      const distance = vertex.distanceTo(point);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestVertex = vertex.clone();
+      }
+    }
+  });
+  
+  return closestVertex;
+}
+
+function createRulerWithExtension(startPoint, endPoint, offsetDistance) {
+  const group = new THREE.Group();
+  
+  const dir = new THREE.Vector3().subVectors(endPoint, startPoint).normalize();
+  const midPoint = new THREE.Vector3().addVectors(startPoint, endPoint).multiplyScalar(0.5);
+  const cameraDir = new THREE.Vector3().subVectors(camera.position, midPoint).normalize();
+  const perpDir = new THREE.Vector3().crossVectors(dir, cameraDir).normalize();
+  
+  const offsetVector = perpDir.multiplyScalar(offsetDistance);
+  
+  const startOffset = new THREE.Vector3().addVectors(startPoint, offsetVector);
+  const endOffset = new THREE.Vector3().addVectors(endPoint, offsetVector);
+  
+  const lineGeometry = new THREE.BufferGeometry().setFromPoints([startOffset, endOffset]);
+  const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0044cc, linewidth: 2, depthTest: false });
+  const mainLine = new THREE.Line(lineGeometry, lineMaterial);
+  mainLine.renderOrder = 999;
+  group.add(mainLine);
+  
+  const extLine1Geometry = new THREE.BufferGeometry().setFromPoints([startPoint, startOffset]);
+  const extLine1 = new THREE.Line(extLine1Geometry, lineMaterial.clone());
+  extLine1.renderOrder = 999;
+  group.add(extLine1);
+  
+  const extLine2Geometry = new THREE.BufferGeometry().setFromPoints([endPoint, endOffset]);
+  const extLine2 = new THREE.Line(extLine2Geometry, lineMaterial.clone());
+  extLine2.renderOrder = 999;
+  group.add(extLine2);
+  
+  const marker1 = createMarker(startOffset, 0x0044cc, 4);
+  const marker2 = createMarker(endOffset, 0x0044cc, 4);
+  group.add(marker1);
+  group.add(marker2);
+  
+  const pointMarker1 = createMarker(startPoint, 0xff0000, 5);
+  const pointMarker2 = createMarker(endPoint, 0xff0000, 5);
+  group.add(pointMarker1);
+  group.add(pointMarker2);
+  
+  const distance = startPoint.distanceTo(endPoint);
+  const distanceMM = Math.round(distance);
+  const labelMidPoint = new THREE.Vector3().addVectors(startOffset, endOffset).multiplyScalar(0.5);
+  const label = createTextSprite(`${distanceMM} мм`, labelMidPoint);
+  group.add(label);
+  
+  return group;
+}
+
+function updateAllRulers() {
+  allRulerGroups.forEach(rulerData => {
+    scene.remove(rulerData.group);
+    rulerData.group = createRulerWithExtension(
+      rulerData.startPoint,
+      rulerData.endPoint,
+      rulerData.offsetDistance
+    );
+    scene.add(rulerData.group);
+  });
+}
+
+function clearRuler() {
+  if (rulerGroup) {
+    scene.remove(rulerGroup);
+    rulerGroup = null;
+  }
+  if (snapMarker) {
+    scene.remove(snapMarker);
+    snapMarker = null;
+  }
+  rulerState = 'waiting_first';
+  rulerFirstPoint = null;
+  rulerSecondPoint = null;
+  rulerOffsetDistance = 0;
+  fixedPerpDir = null;
+}
+
+function clearAllRulers() {
+  allRulerGroups.forEach(rulerData => {
+    scene.remove(rulerData.group);
+  });
+  allRulerGroups = [];
+  clearRuler();
+}
+
+const rulerBtn = document.getElementById('ruler-btn');
+rulerBtn.addEventListener('click', () => {
+  rulerMode = !rulerMode;
+  if (rulerMode) {
+    rulerBtn.textContent = '📏 Линейка (вкл)';
+    rulerBtn.classList.add('active');
+    controls.enabled = false;
+    showTooltip('Кликните на первую точку, затем на вторую. Двигайте мышь для выноски. Кликните для фиксации.');
+    setTimeout(() => hideTooltip(), 4000);
+  } else {
+    rulerBtn.textContent = '📏 Линейка (выкл)';
+    rulerBtn.classList.remove('active');
+    controls.enabled = true;
+    clearRuler();
+  }
+});
 
 function animate(){
   requestAnimationFrame(animate);
