@@ -69,7 +69,7 @@ body.mode-advanced #controls-bar{display:flex;}
 .ctrl-btn:hover{background: #003399;}
 .ctrl-btn.secondary{background: #f0f0f0; color: #333; border: 1px solid #ccc;}
 .ctrl-btn.secondary:hover{background: #e0e0e0;}
-.ctrl-btn.icon-btn{padding:8px 12px; font-size:16px;}
+.ctrl-btn.icon-btn{padding:8px 12px; font-size:18px;}
 
 #settings-panel{
   position:absolute;right:10px;top:60px;width:240px;background:white;
@@ -161,6 +161,12 @@ kbd {
 .settings-group input[type="color"] { width: 60px; height: 36px; border: 2px solid #ddd; border-radius: 4px; cursor: pointer; padding: 2px; }
 .settings-group input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
 .settings-group input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
+.settings-group input[type="range"] { width: 150px; height: 6px; border-radius: 3px; background: #ddd; outline: none; }
+.settings-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 18px; height: 18px;
+  border-radius: 50%; background: #0044cc; cursor: pointer;
+}
+.settings-value { display: inline-block; margin-left: 10px; color: #0044cc; font-weight: bold; min-width: 30px; text-align: right; }
 
 @media (max-width: 600px) {
   .modal-content { padding: 18px; width: 95%; }
@@ -217,7 +223,7 @@ kbd {
   
   <div id="controls-bar">
     <button id="view-toggle-btn" class="ctrl-btn secondary">🔄 Вид сверху</button>
-    <button id="settings-btn" class="ctrl-btn icon-btn" title="Настройки комнаты">️</button>
+    <button id="settings-btn" class="ctrl-btn icon-btn" title="Настройки комнаты">⚙️</button>
   </div>
 
   <div id="settings-panel">
@@ -247,13 +253,13 @@ kbd {
 <div id="instruction-modal" class="modal-backdrop">
   <div class="modal-content">
     <button class="modal-close" id="close-modal">&times;</button>
-    <h2>📖 Как пользоваться конфигуратором</h2>
+    <h2> Как пользоваться конфигуратором</h2>
     <ul class="instruction-list">
       <li><strong>Обычный режим.</strong> Кликните по модели в каталоге — она появится на сцене. Выделите деталь кликом и выберите цвет справа. Можно добавить только 1 изделие.</li>
-      <li><strong>Расширенный режим — расстановка.</strong> Кликните по модели — она появится в центре сцены. Зажмите на ней левую кнопку мыши и перетащите в нужное место. Для поворота выделите изделие и нажмите <kbd>ПКМ</kbd> или клавишу <kbd>R</kbd>.</li>
+      <li><strong>Расширенный режим — расстановка.</strong> Кликните по модели — она появится в центре сцены. Зажмите <strong>левую кнопку мыши</strong> на изделии и перетащите в нужное место. Для поворота выделите изделие и нажмите <strong>правую кнопку мыши</strong> или клавишу <kbd>R</kbd>.</li>
       <li><strong>Антресоли.</strong> Включите кнопку «🧲 Режим: Антресоль» и кликните по модели — она автоматически встанет сверху на ближайший шкаф.</li>
-      <li><strong>Раскраска.</strong> Переключитесь в аксонометрию кнопкой «🔄». Выделите деталь (или несколько с <kbd>Ctrl</kbd>) и выберите цвет.</li>
-      <li><strong>Настройки комнаты.</strong> Нажмите ⚙️ вверху сцены, чтобы изменить цвет пола и стен.</li>
+      <li><strong>Раскраска.</strong> Переключитесь в аксонометрию кнопкой «🔄». Выделите деталь (или несколько с зажатым <kbd>Ctrl</kbd>) и выберите цвет.</li>
+      <li><strong>Настройки комнаты.</strong> Нажмите ⚙️ вверху сцены, чтобы изменить цвет пола, стен и яркость освещения.</li>
       <li><strong>Сохранение.</strong> Нажмите «Скачать изображение» для PNG-снимка.</li>
     </ul>
     <div class="modal-note">
@@ -266,12 +272,17 @@ kbd {
 <div id="room-settings-modal" class="modal-backdrop">
   <div class="modal-content">
     <button class="modal-close" id="close-room-settings">&times;</button>
-    <h2>⚙️ Настройки комнаты</h2>
+    <h2>️ Настройки комнаты</h2>
     <div class="settings-group">
       <label>Цвет пола: <input type="color" id="floor-color-picker" value="#ffffff"></label>
     </div>
     <div class="settings-group">
-      <label>Цвет стен: <input type="color" id="wall-color-picker" value="#d0d0d0"></label>
+      <label>Цвет стен: <input type="color" id="wall-color-picker" value="#ffffff"></label>
+    </div>
+    <div class="settings-group">
+      <label>Яркость света: <span class="settings-value" id="light-value">80</span>%
+        <input type="range" id="light-slider" min="20" max="150" value="80">
+      </label>
     </div>
     <button class="modal-ok-btn" id="apply-room-settings">Применить</button>
   </div>
@@ -361,10 +372,12 @@ let isTopView = false;
 let isAntresoleMode = false;
 
 let floorMesh, wallLeftMesh, wallRightMesh;
+let dirLight, ambientLight;
 
 let isDragging = false;
 let dragObject = null;
 let dragOffset = new THREE.Vector3();
+let dragPreviousPosition = new THREE.Vector3();
 
 function setMode(mode) {
   currentMode = mode;
@@ -386,8 +399,16 @@ function setMode(mode) {
   
   if (mode === 'basic') {
     isTopView = false;
+    scene.background = new THREE.Color(0xffffff);
+    if (floorMesh) floorMesh.visible = false;
+    if (wallLeftMesh) wallLeftMesh.visible = false;
+    if (wallRightMesh) wallRightMesh.visible = false;
   } else {
     isTopView = true;
+    scene.background = new THREE.Color(0xf0f0f0);
+    if (floorMesh) floorMesh.visible = true;
+    if (wallLeftMesh) wallLeftMesh.visible = true;
+    if (wallRightMesh) wallRightMesh.visible = true;
   }
   updateCameraView();
 }
@@ -405,35 +426,33 @@ document.getElementById('link-advanced').addEventListener('click', (e) => {
 function initScene(){
   const viewport = document.getElementById('viewport');
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf0f0f0);
+  scene.background = new THREE.Color(0xffffff);
 
-  // Пол — точно в пределах стен (от 0 до ROOM_SIZE по X и Z)
+  // Пол
   const floorGeo = new THREE.BoxGeometry(ROOM_SIZE, 10, ROOM_SIZE);
   const floorMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
   floorMesh = new THREE.Mesh(floorGeo, floorMat);
   floorMesh.position.set(ROOM_SIZE/2, -5, ROOM_SIZE/2);
   floorMesh.receiveShadow = true;
   floorMesh.name = "floor";
+  floorMesh.visible = false; // Скрыт в обычном режиме
   scene.add(floorMesh);
 
-  // Сетка на полу
-  const grid = new THREE.GridHelper(ROOM_SIZE, 100, 0xcccccc, 0xe5e5e5);
-  grid.position.set(ROOM_SIZE/2, 1, ROOM_SIZE/2);
-  scene.add(grid);
-
-  // Левая стена (вдоль оси Z) — с толщиной 50 мм по X
+  // Левая стена
   const wallLeftGeo = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, ROOM_SIZE);
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0xd0d0d0, side: THREE.DoubleSide });
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
   wallLeftMesh = new THREE.Mesh(wallLeftGeo, wallMat);
   wallLeftMesh.position.set(WALL_THICKNESS/2, WALL_HEIGHT/2, ROOM_SIZE/2);
   wallLeftMesh.name = "wall";
+  wallLeftMesh.visible = false;
   scene.add(wallLeftMesh);
 
-  // Правая стена (вдоль оси X) — с толщиной 50 мм по Z
+  // Правая стена
   const wallRightGeo = new THREE.BoxGeometry(ROOM_SIZE, WALL_HEIGHT, WALL_THICKNESS);
   wallRightMesh = new THREE.Mesh(wallRightGeo, wallMat);
   wallRightMesh.position.set(ROOM_SIZE/2, WALL_HEIGHT/2, WALL_THICKNESS/2);
   wallRightMesh.name = "wall";
+  wallRightMesh.visible = false;
   scene.add(wallRightMesh);
 
   camera = new THREE.PerspectiveCamera(45, viewport.clientWidth / viewport.clientHeight, 1, 50000);
@@ -445,10 +464,15 @@ function initScene(){
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(5000, 8000, 5000);
+  // Освещение
+  ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  scene.add(ambientLight);
+  
+  dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(ROOM_SIZE/2, 8000, ROOM_SIZE/2); // Свет идёт точно в угол
+  dirLight.target.position.set(ROOM_SIZE/2, 0, ROOM_SIZE/2);
   scene.add(dirLight);
+  scene.add(dirLight.target);
 
   updateCameraView();
   animate();
@@ -531,13 +555,11 @@ function addModelToScene(model, addOnTop){
     (gltf) => {
       const group = gltf.scene;
       
-      // Ставим в центр комнаты
       group.position.set(ROOM_SIZE/2, 0, ROOM_SIZE/2);
       
       scene.add(group);
       group.updateMatrixWorld(true);
       
-      // Выравниваем по полу
       const box = new THREE.Box3().setFromObject(group);
       group.position.y = -box.min.y;
       
@@ -580,8 +602,8 @@ function addModelToScene(model, addOnTop){
       hideLoading();
       
       if (currentMode === 'advanced') {
-        showTooltip('💡 Зажмите ЛКМ на изделии — переместить. Выделите и нажмите ПКМ или R — повернуть');
-        setTimeout(() => hideTooltip(), 4000);
+        showTooltip('💡 Зажмите левую кнопку мыши на изделии — переместить. Выделите и нажмите правую кнопку мыши или R — повернуть');
+        setTimeout(() => hideTooltip(), 5000);
       }
     },
     undefined,
@@ -623,6 +645,25 @@ function snapToCabinet(antresoleGroup) {
     antresoleGroup.position.y = targetBox.max.y - antLocalBox.min.y;
     antresoleGroup.updateMatrixWorld(true);
   }
+}
+
+function checkCollision(movingGroup, excludeId) {
+  const movingBox = new THREE.Box3().setFromObject(movingGroup);
+  // Немного уменьшаем box для допуска
+  movingBox.expandByScalar(-10);
+  
+  for (let model of sceneModels) {
+    if (model.id === excludeId) continue;
+    if (model.isTop) continue; // Антресоли не проверяем на коллизии с другими
+    
+    const otherBox = new THREE.Box3().setFromObject(model.group);
+    otherBox.expandByScalar(-10);
+    
+    if (movingBox.intersectsBox(otherBox)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function removeModelFromScene(id){
@@ -696,6 +737,8 @@ viewport.addEventListener('mousedown', (event) => {
       dragObject = modelEntry;
       controls.enabled = false;
       
+      dragPreviousPosition.copy(modelEntry.group.position);
+      
       const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
       const target = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, target);
@@ -720,14 +763,28 @@ viewport.addEventListener('mousemove', (event) => {
   raycaster.ray.intersectPlane(plane, target);
   
   if (target) {
-    dragObject.group.position.x = target.x + dragOffset.x;
-    dragObject.group.position.z = target.z + dragOffset.z;
+    const newX = target.x + dragOffset.x;
+    const newZ = target.z + dragOffset.z;
     
-    // Ограничиваем в пределах комнаты
-    const box = new THREE.Box3().setFromObject(dragObject.group);
-    const size = box.getSize(new THREE.Vector3());
-    dragObject.group.position.x = Math.max(size.x/2, Math.min(ROOM_SIZE - size.x/2, dragObject.group.position.x));
-    dragObject.group.position.z = Math.max(size.z/2, Math.min(ROOM_SIZE - size.z/2, dragObject.group.position.z));
+    // Сохраняем текущую позицию для проверки коллизии
+    const oldX = dragObject.group.position.x;
+    const oldZ = dragObject.group.position.z;
+    
+    dragObject.group.position.x = newX;
+    dragObject.group.position.z = newZ;
+    
+    // Проверяем коллизии
+    if (checkCollision(dragObject.group, dragObject.id)) {
+      // Если есть коллизия — возвращаем на предыдущую позицию
+      dragObject.group.position.x = oldX;
+      dragObject.group.position.z = oldZ;
+    } else {
+      // Ограничиваем в пределах комнаты
+      const box = new THREE.Box3().setFromObject(dragObject.group);
+      const size = box.getSize(new THREE.Vector3());
+      dragObject.group.position.x = Math.max(size.x/2 + WALL_THICKNESS, Math.min(ROOM_SIZE - size.x/2, dragObject.group.position.x));
+      dragObject.group.position.z = Math.max(size.z/2 + WALL_THICKNESS, Math.min(ROOM_SIZE - size.z/2, dragObject.group.position.z));
+    }
     
     if (dragObject.isTop) {
       snapToCabinet(dragObject.group);
@@ -749,7 +806,6 @@ viewport.addEventListener('contextmenu', (e) => {
   if (currentMode !== 'advanced') return;
   
   if (selectedObjects.length >= 1) {
-    // Находим группу первого выделенного объекта
     const selectedMesh = selectedObjects[0];
     const modelEntry = sceneModels.find(m => m.meshes.includes(selectedMesh));
     
@@ -781,7 +837,7 @@ window.addEventListener('keydown', (e) => {
         snapToCabinet(modelEntry.group);
       }
       
-      showTooltip(' Изделие повёрнуто на 90°');
+      showTooltip('🔄 Изделие повёрнуто на 90°');
       setTimeout(() => hideTooltip(), 2000);
     }
   }
@@ -821,7 +877,7 @@ viewport.addEventListener('click', (event) => {
     });
     
     if (currentMode === 'advanced') {
-      showTooltip('💡 ПКМ или R — повернуть. Зажмите ЛКМ — переместить');
+      showTooltip('💡 Правая кнопка мыши или R — повернуть. Зажмите левую кнопку мыши — переместить');
       setTimeout(() => hideTooltip(), 3000);
     }
   }
@@ -831,7 +887,7 @@ function toggleView() {
   isTopView = !isTopView;
   updateCameraView();
   const btn = document.getElementById('view-toggle-btn');
-  btn.textContent = isTopView ? ' Вид сверху' : '🔄 Аксонометрия';
+  btn.textContent = isTopView ? '🔄 Вид сверху' : '🔄 Аксонометрия';
 }
 
 document.getElementById('view-toggle-btn').addEventListener('click', toggleView);
@@ -857,6 +913,8 @@ const roomSettingsModal = document.getElementById('room-settings-modal');
 const closeRoomSettingsBtn = document.getElementById('close-room-settings');
 const floorColorPicker = document.getElementById('floor-color-picker');
 const wallColorPicker = document.getElementById('wall-color-picker');
+const lightSlider = document.getElementById('light-slider');
+const lightValue = document.getElementById('light-value');
 const applyRoomSettingsBtn = document.getElementById('apply-room-settings');
 
 roomSettingsBtn.addEventListener('click', () => {
@@ -873,9 +931,14 @@ roomSettingsModal.addEventListener('click', (e) => {
   }
 });
 
+lightSlider.addEventListener('input', (e) => {
+  lightValue.textContent = e.target.value;
+});
+
 applyRoomSettingsBtn.addEventListener('click', () => {
   const floorColor = floorColorPicker.value;
   const wallColor = wallColorPicker.value;
+  const lightIntensity = parseInt(lightSlider.value) / 100;
   
   if (floorMesh) {
     floorMesh.material.color.set(floorColor);
@@ -883,6 +946,13 @@ applyRoomSettingsBtn.addEventListener('click', () => {
   if (wallLeftMesh && wallRightMesh) {
     wallLeftMesh.material.color.set(wallColor);
     wallRightMesh.material.color.set(wallColor);
+  }
+  
+  if (dirLight) {
+    dirLight.intensity = lightIntensity;
+  }
+  if (ambientLight) {
+    ambientLight.intensity = lightIntensity * 0.6;
   }
   
   roomSettingsModal.classList.remove('show');
