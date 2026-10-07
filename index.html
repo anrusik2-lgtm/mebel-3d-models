@@ -1093,37 +1093,35 @@ viewport.addEventListener('click', (event) => {
 
   const intersects = raycaster.intersectObjects(allMeshes, true);
 
-  // Сбрасываем все выделения
-  allMeshes.forEach(m => {
-    const mats = Array.isArray(m.material) ? m.material : [m.material];
-    mats.forEach(mt => { if(mt.emissive) mt.emissive.setHex(0x000000); });
-  });
-
   if(intersects.length > 0){
     const clickedObject = intersects[0].object;
     
     // === ИСПРАВЛЕНИЕ: Ctrl+клик для мультивыделения ===
     if (event.ctrlKey || event.metaKey) {
-      // Предотвращаем стандартное поведение браузера
       event.preventDefault();
       
       const index = selectedObjects.indexOf(clickedObject);
+      const selMats = Array.isArray(clickedObject.material) ? clickedObject.material : [clickedObject.material];
+      
       if (index > -1) {
         // Убираем из выделения
         selectedObjects.splice(index, 1);
-        const selMats = Array.isArray(clickedObject.material) ? clickedObject.material : [clickedObject.material];
         selMats.forEach(m => { if(m.emissive) m.emissive.setHex(0x000000); });
       } else {
         // Добавляем к выделению
         selectedObjects.push(clickedObject);
-        const selMats = Array.isArray(clickedObject.material) ? clickedObject.material : [clickedObject.material];
         selMats.forEach(m => { if(m.emissive) m.emissive.setHex(0xff0000); });
       }
       
       console.log('Выделено деталей:', selectedObjects.length);
       console.log('Имена:', selectedObjects.map(o => o.name));
     } else {
-      // Одиночное выделение
+      // Одиночное выделение: сбрасываем ВСЕ, потом выделяем одну
+      allMeshes.forEach(m => {
+        const mats = Array.isArray(m.material) ? m.material : [m.material];
+        mats.forEach(mt => { if(mt.emissive) mt.emissive.setHex(0x000000); });
+      });
+      
       selectedObjects = [clickedObject];
       const selMats = Array.isArray(clickedObject.material) ? clickedObject.material : [clickedObject.material];
       selMats.forEach(m => { if(m.emissive) m.emissive.setHex(0xff0000); });
@@ -1137,6 +1135,10 @@ viewport.addEventListener('click', (event) => {
     }
   } else {
     // Клик в пустоту - снимаем выделение
+    allMeshes.forEach(m => {
+      const mats = Array.isArray(m.material) ? m.material : [m.material];
+      mats.forEach(mt => { if(mt.emissive) mt.emissive.setHex(0x000000); });
+    });
     selectedObjects = [];
   }
 });
