@@ -250,20 +250,20 @@ body.mode-advanced #clear-rulers-btn { display: inline-flex; }
     <button class="modal-close" id="close-modal">&times;</button>
     <h2>📖 Как пользоваться конфигуратором</h2>
     <ul class="instruction-list">
-      <li><strong>Режимы работы.</strong> Сверху над каталогом есть ссылки <strong>«Обычный / Расширенный»</strong>. В <strong>Обычном</strong> режиме — просто кликните по модели в каталоге, она сразу появится на сцене. Можно добавить только 1 изделие и раскрасить его. В <strong>Расширенном</strong> режиме — используйте кнопки ➕ и ️ для добавления нескольких изделий и антресолей, перетаскивайте их в списке, используйте линейку и настройки.</li>
-      <li><strong>1. Добавление изделий (Расширенный режим).</strong> Нажмите синюю кнопку <strong></strong> рядом с моделью. Первое изделие появится в центре сцены, каждое следующее добавится справа от предыдущего. Максимум 5 изделий. В Обычном режиме — просто кликните по карточке модели.</li>
+      <li><strong>Режимы работы.</strong> Сверху над каталогом есть ссылки <strong>«Обычный / Расширенный»</strong>. В <strong>Обычном</strong> режиме — просто кликните по модели в каталоге, она сразу появится на сцене. Можно добавить только 1 изделие и раскрасить его. В <strong>Расширенном</strong> режиме — используйте кнопки ➕ и ⬆️ для добавления нескольких изделий и антресолей, перетаскивайте их в списке, используйте линейку и настройки.</li>
+      <li><strong>1. Добавление изделий (Расширенный режим).</strong> Нажмите синюю кнопку <strong>➕</strong> рядом с моделью. Первое изделие появится в центре сцены, каждое следующее добавится справа от предыдущего. Максимум 5 изделий. В Обычном режиме — просто кликните по карточке модели.</li>
       <li><strong>2. Антресоли.</strong> Нажмите зелёную кнопку <strong>со стрелкой вверх</strong> — антресоль автоматически встанет сверху на последнее добавленное изделие, у которого ещё нет антресоли. Максимум 5 антресолей.</li>
       <li><strong>3. Вращение и масштаб.</strong> Зажмите левую кнопку мыши и двигайте для вращения сцены. Колесико мыши — приближение/отдаление.</li>
       <li><strong>4. Выделение деталей.</strong> Кликните <strong>левой кнопкой мыши</strong> по детали на 3D-модели — она подсветится. Зажмите <kbd>Ctrl</kbd> (или <kbd>Cmd</kbd> на Mac) для выделения нескольких деталей. Затем выберите цвет или текстуру на правой панели. Красится только выбранная деталь.</li>
       <li><strong>5. Перестановка изделий.</strong> В списке <strong>«Добавлено в сцену»</strong> зажмите левую кнопку мыши на любом изделии и перетащите его на нужное место. Изделия на сцене автоматически перестроятся в новом порядке. Антресоли перемещаются вместе со своими шкафами.</li>
       <li><strong>6. Покраска всего изделия.</strong> Включите галочку «Заменить весь цвет» — цвет применится ко всем деталям сразу. Галочка автоматически снимется после применения.</li>
-      <li><strong>7. Линейка.</strong> Нажмите кнопку <strong>« Линейка»</strong>. Кликните на первую точку модели, затем на вторую. Двигайте мышь в любую сторону — выноска с размером будет следовать за курсором. Кликните третий раз, чтобы зафиксировать размер. Можно ставить сколько угодно линеек из одной точки.</li>
+      <li><strong>7. Линейка.</strong> Нажмите кнопку <strong>«📏 Линейка»</strong>. Кликните на первую точку модели, затем на вторую. Двигайте мышь в любую сторону — выноска с размером будет следовать за курсором. Кликните третий раз, чтобы зафиксировать размер. Можно ставить сколько угодно линеек из одной точки.</li>
       <li><strong>8. Настройки.</strong> Нажмите <strong>⚙️</strong> рядом с кнопкой линейки. Здесь можно настроить размер текста (75–300 px) и расстояние между изделиями (0–200). Изменение расстояния мгновенно переставляет модели на сцене.</li>
       <li><strong>9. Скачать изображение.</strong> Нажмите кнопку «Скачать изображение» — сохранится PNG-снимок текущего вида сцены.</li>
       <li><strong>10. Очистка.</strong> «Очистить сцену» удаляет все модели. «Удалить линейки» убирает только размеры, оставляя модели.</li>
     </ul>
     <div class="modal-note">
-      💡 <em>Технические детали (задняя стенка, кромки, фурнитура) защищены от изменения цвета.</em>
+      💡 <em>Технические детали (задняя стенка, кромки, фурнитура с пометкой _NON) защищены от изменения цвета. Детали с пометкой _FAN окрашиваются только материалами из вкладки «Покраска».</em>
     </div>
     <button class="modal-ok-btn" id="modal-ok">Всё понятно!</button>
   </div>
@@ -272,7 +272,7 @@ body.mode-advanced #clear-rulers-btn { display: inline-flex; }
 <div id="ruler-settings-modal" class="modal-backdrop">
   <div class="modal-content">
     <button class="modal-close" id="close-ruler-settings">&times;</button>
-    <h2>️ Настройки</h2>
+    <h2>⚙️ Настройки</h2>
     <div class="settings-group">
       <label>Размер текста: <span class="settings-value" id="font-size-value">120</span>px</label>
       <input type="range" id="font-size-slider" min="75" max="300" value="120">
@@ -941,7 +941,8 @@ function updateSceneListUI(){
 
 const textureLoader = new THREE.TextureLoader();
 
-function applyMaterial(value){
+// === ИЗМЕНЕННАЯ ФУНКЦИЯ ОКРАШИВАНИЯ ===
+function applyMaterial(value, category) {
   const applyToAllCheckbox = document.getElementById('apply-to-all');
   const applyToAll = applyToAllCheckbox.checked;
   let group = [];
@@ -963,7 +964,20 @@ function applyMaterial(value){
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     
     group.forEach(obj => {
-      if (obj.name && obj.name.endsWith('_NON')) return;
+      const objName = obj.name || "";
+      const isNon = objName.endsWith('_NON');
+      const isFan = objName.endsWith('_FAN');
+
+      // 1. Детали _NON не окрашиваются вообще
+      if (isNon) return;
+
+      // 2. Детали _FAN окрашиваются ТОЛЬКО материалами из вкладки "Покраска"
+      if (isFan && category !== 'paint') return;
+
+      // 3. Материалы из вкладки "Покраска" применяются ТОЛЬКО к деталям _FAN
+      if (!isFan && category === 'paint') return;
+
+      // Если все проверки пройдены, применяем материал
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       mats.forEach(m => {
         m.map = tex;
@@ -1310,7 +1324,7 @@ rulerBtn.addEventListener('click', () => {
     rulerBtn.classList.add('active');
     controls.enabled = false;
   } else {
-    rulerBtn.textContent = ' Линейка (выкл)';
+    rulerBtn.textContent = '📏 Линейка (выкл)';
     rulerBtn.classList.remove('active');
     controls.enabled = true;
     clearRuler();
@@ -1399,21 +1413,24 @@ document.getElementById('screenshot-btn').addEventListener('click', () => {
   document.body.removeChild(a);
 });
 
-function renderTextureList(containerId, items){
+// === ОБНОВЛЕННАЯ ФУНКЦИЯ ОТРИСОВКИ СПИСКОВ С КАТЕГОРИЕЙ ===
+function renderTextureList(containerId, items, category){
   const container = document.getElementById(containerId);
   container.innerHTML = '';
   items.forEach(tex => {
     const div = document.createElement('div');
     div.className = 'texture-item';
     div.innerHTML = `<img src="${tex.image}" loading="lazy" alt="${tex.name}"><div class="texture-name">${tex.name}</div>`;
-    div.addEventListener('click', () => applyMaterial(tex.image));
+    // Передаем категорию ('standard', 'fantasy' или 'paint') при клике
+    div.addEventListener('click', () => applyMaterial(tex.image, category));
     container.appendChild(div);
   });
 }
 
-renderTextureList('standard-list', standardTextures);
-renderTextureList('fantasy-list', fantasyTextures);
-renderTextureList('paint-list', paintTextures);
+// Вызываем с указанием категории
+renderTextureList('standard-list', standardTextures, 'standard');
+renderTextureList('fantasy-list', fantasyTextures, 'fantasy');
+renderTextureList('paint-list', paintTextures, 'paint');
 
 function showLoading(text){
   document.getElementById('loading-text').innerText = text;
@@ -1454,7 +1471,6 @@ const okBtn = document.getElementById('modal-ok');
 function openModal() { modal.classList.add('show'); }
 function closeModal() { 
   modal.classList.remove('show'); 
-  // Сохраняем дату показа инструкции
   const today = new Date().toISOString().split('T')[0];
   localStorage.setItem('configurator_help_seen_' + today, 'true');
 }
@@ -1464,7 +1480,6 @@ closeBtn.addEventListener('click', closeModal);
 okBtn.addEventListener('click', closeModal);
 modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-// Показываем инструкцию 1 раз в день
 const today = new Date().toISOString().split('T')[0];
 if (!localStorage.getItem('configurator_help_seen_' + today)) {
   setTimeout(openModal, 1500);
