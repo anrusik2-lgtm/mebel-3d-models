@@ -221,7 +221,7 @@ kbd {
     <div id="scene-list"></div>
     <div class="scene-actions">
       <button id="clear-rulers-btn">🗑️ Удалить линейки</button>
-      <button id="clear-scene-btn">️🗑️ Очистить сцену</button>
+      <button id="clear-scene-btn">🗑️ Очистить сцену</button>
     </div>
   </div>
 </div>
@@ -251,7 +251,7 @@ kbd {
     </div>
     
     <button id="reset-btn">Вернуть материал</button>
-    <button id="screenshot-btn"> Скачать изображение</button>
+    <button id="screenshot-btn">📷 Скачать изображение</button>
   </div>
   
   <div id="tooltip"></div>
@@ -294,7 +294,7 @@ kbd {
         <br>• Настроить яркость освещения (200-500%)
         <br>• Изменить размер текста на линейке (50-300 px)</li>
       
-      <li><strong>12. Удаление.</strong> В списке «Добавлено в сцену» (внизу левой панели) нажмите <strong>✕</strong> рядом с нужным изделием, чтобы удалить его. Кнопка <strong>«🗑️ Очистить сцену»</strong> удаляет все изделия. Кнопка <strong>«️ Удалить линейки»</strong> убирает только размерные линии.</li>
+      <li><strong>12. Удаление.</strong> В списке «Добавлено в сцену» (внизу левой панели) нажмите <strong>✕</strong> рядом с нужным изделием, чтобы удалить его. Кнопка <strong>«🗑️ Очистить сцену»</strong> удаляет все изделия. Кнопка <strong>«🗑️ Удалить линейки»</strong> убирает только размерные линии.</li>
       
       <li><strong>13. Сохранение изображения.</strong> Нажмите <strong>«📷 Скачать изображение»</strong> — сохранится PNG-снимок текущего вида сцены без подсветки выделенных деталей.</li>
       
@@ -318,8 +318,8 @@ kbd {
       <label>Цвет стен: <input type="color" id="wall-color-picker" value="#c2c2c2"></label>
     </div>
     <div class="settings-group">
-      <label>Яркость света: <span class="settings-value" id="light-value">250</span>%
-        <input type="range" id="light-slider" min="200" max="500" value="250">
+      <label>Яркость света: <span class="settings-value" id="light-value">160</span>%
+        <input type="range" id="light-slider" min="200" max="500" value="160">
       </label>
     </div>
     <div class="settings-group">
@@ -459,12 +459,33 @@ function setMode(mode) {
     if (floorMesh) floorMesh.visible = false;
     if (wallLeftMesh) wallLeftMesh.visible = false;
     if (wallRightMesh) wallRightMesh.visible = false;
+    
+    // Убавляем свет для обычного режима
+    const intensity = 1.6;
+    if (ambientLight) ambientLight.intensity = intensity;
+    if (dirLight) dirLight.intensity = intensity;
+    if (leftLight) leftLight.intensity = intensity * 0.6;
+    if (rightLight) rightLight.intensity = intensity * 0.6;
+    if (frontLight) frontLight.intensity = intensity * 0.8;
+    document.getElementById('light-slider').value = 160;
+    document.getElementById('light-value').textContent = 160;
+    
   } else {
     isTopView = true;
     scene.background = new THREE.Color(0xf0f0f0);
     if (floorMesh) floorMesh.visible = true;
     if (wallLeftMesh) wallLeftMesh.visible = true;
     if (wallRightMesh) wallRightMesh.visible = true;
+    
+    // Возвращаем яркий свет для расширенного режима
+    const intensity = 2.5;
+    if (ambientLight) ambientLight.intensity = intensity;
+    if (dirLight) dirLight.intensity = intensity;
+    if (leftLight) leftLight.intensity = intensity * 0.6;
+    if (rightLight) rightLight.intensity = intensity * 0.6;
+    if (frontLight) frontLight.intensity = intensity * 0.8;
+    document.getElementById('light-slider').value = 250;
+    document.getElementById('light-value').textContent = 250;
   }
   updateCameraView();
 }
@@ -493,8 +514,9 @@ function initScene(){
   floorMesh.visible = false;
   scene.add(floorMesh);
 
+  // ИЗМЕНЕНИЕ: Цвет стен по умолчанию серый (#c2c2c2)
   const wallLeftGeo = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, ROOM_SIZE);
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0xc2c2c2, side: THREE.DoubleSide });
   wallLeftMesh = new THREE.Mesh(wallLeftGeo, wallMat);
   wallLeftMesh.position.set(WALL_THICKNESS/2, WALL_HEIGHT/2, ROOM_SIZE/2);
   wallLeftMesh.name = "wall";
@@ -517,7 +539,8 @@ function initScene(){
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  const baseIntensity = 2.5;
+  // ИЗМЕНЕНИЕ: Начальная яркость света снижена для обычного режима
+  const baseIntensity = 1.6;
   ambientLight = new THREE.AmbientLight(0xffffff, baseIntensity);
   scene.add(ambientLight);
   
