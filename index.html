@@ -50,6 +50,7 @@ body.mode-advanced #scene-list-container{display:block;}
 .scene-actions button{
   flex:1; padding:6px; border-radius:4px; cursor:pointer; 
   font-weight:bold; font-size:11px; border:2px solid; transition:0.2s;
+  display:flex; align-items:center; justify-content:center; gap:4px;
 }
 #clear-scene-btn{background:#f5deb3; border-color:#d4a76a; color:#333;}
 #clear-scene-btn:hover{background:#f0d59a;}
@@ -130,7 +131,7 @@ body.mode-advanced #antresole-toggle{display:block;}
 .modal-backdrop.show { display: flex; opacity: 1; }
 .modal-content {
   background: white; padding: 25px; border-radius: 14px;
-  max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  max-width: 600px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   position: relative; transform: translateY(20px); transition: transform 0.3s ease;
   max-height: 85vh; overflow-y: auto;
 }
@@ -219,8 +220,8 @@ kbd {
     </h3>
     <div id="scene-list"></div>
     <div class="scene-actions">
-      <button id="clear-rulers-btn">️ Линейки</button>
-      <button id="clear-scene-btn">🗑️ Сцена</button>
+      <button id="clear-rulers-btn">🗑️ Удалить линейки</button>
+      <button id="clear-scene-btn">️ Очистить сцену</button>
     </div>
   </div>
 </div>
@@ -231,7 +232,7 @@ kbd {
   <div id="controls-bar">
     <button id="view-toggle-btn" class="ctrl-btn secondary">🔄 Вид сверху</button>
     <button id="ruler-btn" class="ctrl-btn secondary">📏 Линейка (выкл)</button>
-    <button id="settings-btn" class="ctrl-btn icon-btn" title="Настройки комнаты">️</button>
+    <button id="settings-btn" class="ctrl-btn icon-btn" title="Настройки комнаты">⚙️</button>
   </div>
 
   <div id="settings-panel">
@@ -250,7 +251,7 @@ kbd {
     </div>
     
     <button id="reset-btn">Вернуть материал</button>
-    <button id="screenshot-btn">📷 Скачать изображение</button>
+    <button id="screenshot-btn"> Скачать изображение</button>
   </div>
   
   <div id="tooltip"></div>
@@ -263,16 +264,44 @@ kbd {
     <button class="modal-close" id="close-modal">&times;</button>
     <h2>📖 Как пользоваться конфигуратором</h2>
     <ul class="instruction-list">
-      <li><strong>Обычный режим.</strong> Кликните по модели — она появится в центре. Выделите деталь и выберите цвет.</li>
-      <li><strong>Расширенный режим.</strong> Кликните по модели — она появится с поворотом 180°. Зажмите <strong>левую кнопку мыши</strong> для перемещения. Изделия примагничиваются друг к другу и к стенам.</li>
-      <li><strong>Поворот.</strong> Выделите изделие и нажмите <strong>правую кнопку мыши</strong> или клавишу <kbd>R</kbd>.</li>
-      <li><strong>Антресоли.</strong> Включите «🧲 Режим: Антресоль» перед кликом. Антресоль перемещается вместе со своим шкафом.</li>
-      <li><strong>Раскраска нескольких деталей.</strong> Зажмите <kbd>Ctrl</kbd> и кликайте по разным деталям — все они выделятся красным. Затем выберите цвет. Галочка «Заменить весь цвет» перекрасит все детали <strong>только выбранных изделий</strong>.</li>
-      <li><strong>Линейка.</strong> Нажмите «📏 Линейка». Кликните на первую точку (изделие или пол), затем на вторую. Двигайте мышь для выноски, кликните для фиксации.</li>
-      <li><strong>Настройки.</strong> Нажмите ⚙️ для изменения цвета стен/пола, яркости света (100-300%) и размера текста линейки.</li>
+      <li><strong>1. Режимы работы.</strong> Вверху слева есть переключатель <strong>«Обычный / Расширенный»</strong>. В <strong>Обычном</strong> режиме вы можете добавить только одно изделие и раскрасить его детали. В <strong>Расширенном</strong> режиме можно расставить несколько изделий в комнате, поворачивать их, добавлять антресоли и измерять расстояния.</li>
+      
+      <li><strong>2. Добавление изделий.</strong> Кликните по названию модели в каталоге слева. В обычном режиме изделие появится в центре сцены. В расширенном — тоже в центре, но с поворотом на 180° (лицом к вам). Если нужно несколько одинаковых изделий — кликайте по модели несколько раз.</li>
+      
+      <li><strong>3. Перемещение (Расширенный режим).</strong> Зажмите <strong>левую кнопку мыши</strong> на любом изделии и тащите его в нужное место. Изделия автоматически примагничиваются друг к другу и к стенам, если расстояние между ними меньше 100 мм. Они не могут заходить друг в друга — система автоматически вытолкнет их.</li>
+      
+      <li><strong>4. Поворот.</strong> Кликните на изделие, чтобы выделить его (оно подсветится красным). Затем нажмите <strong>правую кнопку мыши</strong> или клавишу <kbd>R</kbd> на клавиатуре — изделие повернётся на 90°. Можно нажимать несколько раз.</li>
+      
+      <li><strong>5. Антресоли.</strong> В расширенном режиме внизу каталога есть кнопка <strong>«🧲 Режим: Антресоль»</strong>. Нажмите её (она станет зелёной), затем кликните по модели в каталоге. Антресоль автоматически встанет сверху на ближайший шкаф. При перемещении шкафа антресоль двигается вместе с ним. Чтобы добавить обычный шкаф — отключите кнопку.</li>
+      
+      <li><strong>6. Выделение деталей для покраски.</strong> Кликните <strong>левой кнопкой мыши</strong> по детали на 3D-модели — она подсветится красным. Чтобы выделить несколько деталей одновременно, зажмите клавишу <kbd>Ctrl</kbd> (или <kbd>Cmd</kbd> на Mac) и кликайте по нужным деталям. Повторный клик с зажатым Ctrl снимает выделение.</li>
+      
+      <li><strong>7. Покраска.</strong> После выделения деталей выберите цвет или текстуру на правой панели. Есть три вкладки:
+        <br>• <strong>Стандартные</strong> — цвета ЛДСП (белый, дуб, орех и т.д.)
+        <br>• <strong>Фантазийные</strong> — яркие цвета ЛДСП (красный, синий, зелёный и т.д.)
+        <br>• <strong>Покраска</strong> — цвета только для фанерных деталей (детали с пометкой _FAN)
+        <br>⚠️ <strong>Важно:</strong> Детали с пометкой _NON (технические: задняя стенка, кромки, фурнитура) не окрашиваются. Детали _FAN окрашиваются только цветами из вкладки «Покраска». Обычные детали (ЛДСП) окрашиваются только из вкладок «Стандартные» и «Фантазийные».</li>
+      
+      <li><strong>8. Покраска всего изделия.</strong> Если включена галочка <strong>«Заменить весь цвет»</strong>, то цвет применится ко всем деталям выбранных изделий сразу (кроме _NON и _FAN). Галочка автоматически снимется после применения.</li>
+      
+      <li><strong>9. Линейка.</strong> Нажмите кнопку <strong>«📏 Линейка»</strong> вверху сцены. Кликните на первую точку (можно на деталь или на пол), затем на вторую точку. Двигайте мышь в любую сторону — выноска с размером будет следовать за курсором. Кликните третий раз, чтобы зафиксировать размер. Можно ставить сколько угодно линеек из одной точки. Чтобы выключить линейку — нажмите кнопку ещё раз.</li>
+      
+      <li><strong>10. Вид камеры.</strong> Кнопка <strong>«🔄 Вид сверху / Аксонометрия»</strong> переключает камеру. Вид сверху удобен для расстановки мебели (камера смотрит строго вниз). Аксонометрия — для оценки внешнего вида и покраски (камера под углом, можно вращать сцену).</li>
+      
+      <li><strong>11. Настройки комнаты.</strong> Нажмите кнопку <strong>⚙️</strong> вверху сцены. Откроется окно, где можно:
+        <br>• Изменить цвет пола
+        <br>• Изменить цвет стен
+        <br>• Настроить яркость освещения (200-500%)
+        <br>• Изменить размер текста на линейке (50-300 px)</li>
+      
+      <li><strong>12. Удаление.</strong> В списке «Добавлено в сцену» (внизу левой панели) нажмите <strong>✕</strong> рядом с нужным изделием, чтобы удалить его. Кнопка <strong>«🗑️ Очистить сцену»</strong> удаляет все изделия. Кнопка <strong>«️ Удалить линейки»</strong> убирает только размерные линии.</li>
+      
+      <li><strong>13. Сохранение изображения.</strong> Нажмите <strong>«📷 Скачать изображение»</strong> — сохранится PNG-снимок текущего вида сцены без подсветки выделенных деталей.</li>
+      
+      <li><strong>14. Сброс цвета.</strong> Кнопка <strong>«Вернуть материал»</strong> возвращает исходный цвет выделенным деталям (или всем, если ничего не выделено).</li>
     </ul>
     <div class="modal-note">
-      💡 <em>Детали _NON не окрашиваются. Детали _FAN — только из вкладки «Покраска».</em>
+      💡 <em>Совет: используйте вид сверху для точной расстановки мебели, а аксонометрию — для оценки внешнего вида и покраски. Детали примагничиваются автоматически на расстоянии до 100 мм.</em>
     </div>
     <button class="modal-ok-btn" id="modal-ok">Всё понятно!</button>
   </div>
@@ -286,11 +315,11 @@ kbd {
       <label>Цвет пола: <input type="color" id="floor-color-picker" value="#ffffff"></label>
     </div>
     <div class="settings-group">
-      <label>Цвет стен: <input type="color" id="wall-color-picker" value="#f0f0f0"></label>
+      <label>Цвет стен: <input type="color" id="wall-color-picker" value="#ffffff"></label>
     </div>
     <div class="settings-group">
-      <label>Яркость света: <span class="settings-value" id="light-value">150</span>%
-        <input type="range" id="light-slider" min="100" max="300" value="150">
+      <label>Яркость света: <span class="settings-value" id="light-value">250</span>%
+        <input type="range" id="light-slider" min="200" max="500" value="250">
       </label>
     </div>
     <div class="settings-group">
@@ -314,7 +343,6 @@ const ROOM_SIZE = 5000;
 const WALL_HEIGHT = 3000;
 const WALL_THICKNESS = 50;
 const SNAP_DISTANCE = 100;
-const DEPTH_MATCH_TOLERANCE = 50;
 
 const standardTextures = [
   {name:'Белый', image:'textures/belyy_6459_ultradecor.jpg'},
@@ -395,7 +423,6 @@ let dragObject = null;
 let dragOffset = new THREE.Vector3();
 let mouseDownPos = new THREE.Vector2();
 
-// Линейка
 let rulerMode = false;
 let rulerState = 'waiting_first';
 let rulerFirstPoint = null;
@@ -467,7 +494,7 @@ function initScene(){
   scene.add(floorMesh);
 
   const wallLeftGeo = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, ROOM_SIZE);
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, side: THREE.DoubleSide });
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
   wallLeftMesh = new THREE.Mesh(wallLeftGeo, wallMat);
   wallLeftMesh.position.set(WALL_THICKNESS/2, WALL_HEIGHT/2, ROOM_SIZE/2);
   wallLeftMesh.name = "wall";
@@ -490,7 +517,7 @@ function initScene(){
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  const baseIntensity = 1.5;
+  const baseIntensity = 2.5;
   ambientLight = new THREE.AmbientLight(0xffffff, baseIntensity);
   scene.add(ambientLight);
   
@@ -529,12 +556,12 @@ function updateCameraView() {
     controls.target.set(0, 500, 0);
     controls.enableRotate = true;
   } else if (isTopView) {
-    camera.position.set(ROOM_SIZE/2, 8000, ROOM_SIZE/2);
+    camera.position.set(ROOM_SIZE/2, 5000, ROOM_SIZE/2);
     camera.lookAt(ROOM_SIZE/2, 0, ROOM_SIZE/2);
     controls.target.set(ROOM_SIZE/2, 0, ROOM_SIZE/2);
     controls.enableRotate = false;
   } else {
-    camera.position.set(ROOM_SIZE/2 + 4000, 3500, ROOM_SIZE/2 + 4000);
+    camera.position.set(ROOM_SIZE/2 + 2500, 3000, ROOM_SIZE/2 + 2500);
     camera.lookAt(ROOM_SIZE/2, 1000, ROOM_SIZE/2);
     controls.target.set(ROOM_SIZE/2, 1000, ROOM_SIZE/2);
     controls.enableRotate = true;
@@ -656,7 +683,7 @@ function addModelToScene(model, addOnTop){
       hideLoading();
       
       if (currentMode === 'advanced') {
-        showTooltip('💡 Зажмите левую кнопку мыши — переместить. Выделите и нажмите правую кнопку мыши или R — повернуть. Ctrl+клик — выделить несколько деталей.');
+        showTooltip('💡 Зажмите левую кнопку мыши — переместить. Выделите и нажмите правую кнопку мыши или R — повернуть');
         setTimeout(() => hideTooltip(), 5000);
       }
     },
@@ -707,15 +734,11 @@ function snapToCabinet(antresoleGroup) {
 
 function resolveCollisionsAndSnap(movingGroup, excludeId) {
   const movingBox = new THREE.Box3().setFromObject(movingGroup);
-  const movingDepth = movingBox.max.z - movingBox.min.z;
-  const movingWidth = movingBox.max.x - movingBox.min.x;
   
   for (let model of sceneModels) {
     if (model.id === excludeId) continue;
     
     const otherBox = new THREE.Box3().setFromObject(model.group);
-    const otherDepth = otherBox.max.z - otherBox.min.z;
-    const otherWidth = otherBox.max.x - otherBox.min.x;
     
     if (movingBox.intersectsBox(otherBox)) {
       const overlapX = Math.min(movingBox.max.x, otherBox.max.x) - Math.max(movingBox.min.x, otherBox.min.x);
@@ -738,20 +761,12 @@ function resolveCollisionsAndSnap(movingGroup, excludeId) {
         movingBox.setFromObject(movingGroup);
       }
       
-      const depthDiff = Math.abs(movingDepth - otherDepth);
-      if (depthDiff < DEPTH_MATCH_TOLERANCE) {
-        const movingCenterZ = (movingBox.min.z + movingBox.max.z) / 2;
-        const otherCenterZ = (otherBox.min.z + otherBox.max.z) / 2;
-        movingGroup.position.z += (otherCenterZ - movingCenterZ);
+      if (Math.abs(movingBox.min.z - otherBox.max.z) < SNAP_DISTANCE) {
+        movingGroup.position.z += (otherBox.max.z - movingBox.min.z);
         movingBox.setFromObject(movingGroup);
-      } else {
-        if (Math.abs(movingBox.min.z - otherBox.max.z) < SNAP_DISTANCE) {
-          movingGroup.position.z += (otherBox.max.z - movingBox.min.z);
-          movingBox.setFromObject(movingGroup);
-        } else if (Math.abs(movingBox.max.z - otherBox.min.z) < SNAP_DISTANCE) {
-          movingGroup.position.z -= (movingBox.max.z - otherBox.min.z);
-          movingBox.setFromObject(movingGroup);
-        }
+      } else if (Math.abs(movingBox.max.z - otherBox.min.z) < SNAP_DISTANCE) {
+        movingGroup.position.z -= (movingBox.max.z - otherBox.min.z);
+        movingBox.setFromObject(movingGroup);
       }
     }
   }
@@ -1057,36 +1072,32 @@ viewport.addEventListener('click', (event) => {
 
   const intersects = raycaster.intersectObjects(allMeshes, true);
 
+  allMeshes.forEach(m => {
+    const mats = Array.isArray(m.material) ? m.material : [m.material];
+    mats.forEach(mt => { if(mt.emissive) mt.emissive.setHex(0x000000); });
+  });
+  selectedObjects = [];
+
   if(intersects.length > 0){
     const clickedObject = intersects[0].object;
     
     if (event.ctrlKey || event.metaKey) {
       const index = selectedObjects.indexOf(clickedObject);
-      if (index > -1) {
-        selectedObjects.splice(index, 1);
-      } else {
-        selectedObjects.push(clickedObject);
-      }
+      if (index > -1) selectedObjects.splice(index, 1);
+      else selectedObjects.push(clickedObject);
     } else {
       selectedObjects = [clickedObject];
     }
-  } else {
-    selectedObjects = [];
-  }
 
-  allMeshes.forEach(m => {
-    const mats = Array.isArray(m.material) ? m.material : [m.material];
-    mats.forEach(mt => { if(mt.emissive) mt.emissive.setHex(0x000000); });
-  });
-  
-  selectedObjects.forEach(obj => {
-    const selMats = Array.isArray(obj.material) ? obj.material : [obj.material];
-    selMats.forEach(m => { if(m.emissive) m.emissive.setHex(0xff0000); });
-  });
-  
-  if (currentMode === 'advanced' && selectedObjects.length > 0) {
-    showTooltip(`💡 Выделено деталей: ${selectedObjects.length}. Правая кнопка мыши или R — повернуть. Зажмите левую кнопку мыши — переместить.`);
-    setTimeout(() => hideTooltip(), 3000);
+    selectedObjects.forEach(obj => {
+      const selMats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      selMats.forEach(m => { if(m.emissive) m.emissive.setHex(0xff0000); });
+    });
+    
+    if (currentMode === 'advanced') {
+      showTooltip('💡 Правая кнопка мыши или R — повернуть. Зажмите левую кнопку мыши — переместить');
+      setTimeout(() => hideTooltip(), 3000);
+    }
   }
 });
 
@@ -1216,14 +1227,24 @@ function applyMaterial(value, category) {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     
+    let hasPaintAttempt = false;
+    let hasLdspAttempt = false;
+    
     group.forEach(obj => {
       const objName = obj.name || "";
       const isNon = objName.endsWith('_NON');
       const isFan = objName.endsWith('_FAN');
 
       if (isNon) return;
-      if (isFan && category !== 'paint') return;
-      if (!isFan && category === 'paint') return;
+      
+      if (isFan && category !== 'paint') {
+        hasLdspAttempt = true;
+        return;
+      }
+      if (!isFan && category === 'paint') {
+        hasPaintAttempt = true;
+        return;
+      }
 
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       mats.forEach(m => {
@@ -1232,6 +1253,13 @@ function applyMaterial(value, category) {
         m.needsUpdate = true;
       });
     });
+    
+    if (hasPaintAttempt) {
+      alert('⚠️ Цвета из вкладки «Покраска» предназначены только для фанерных деталей (с пометкой _FAN).\n\nВыбранные вами детали — из ЛДСП. Используйте цвета из вкладок «Стандартные» или «Фантазийные».');
+    }
+    if (hasLdspAttempt) {
+      alert('⚠️ Цвета из вкладок «Стандартные» и «Фантазийные» предназначены для деталей из ЛДСП.\n\nВыбранные вами детали — фанерные (с пометкой _FAN). Используйте цвета из вкладки «Покраска».');
+    }
   }, undefined, (err) => {
     console.error('Не удалось загрузить текстуру:', value, err);
   });
@@ -1471,7 +1499,7 @@ const rulerBtn = document.getElementById('ruler-btn');
 rulerBtn.addEventListener('click', () => {
   rulerMode = !rulerMode;
   if (rulerMode) {
-    rulerBtn.textContent = ' Линейка (вкл)';
+    rulerBtn.textContent = '📏 Линейка (вкл)';
     rulerBtn.classList.add('active');
     controls.enabled = false;
     showTooltip('Кликните на первую точку (изделие или пол), затем на вторую. Двигайте мышь для выноски. Кликните для фиксации.');
