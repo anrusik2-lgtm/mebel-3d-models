@@ -2,13 +2,18 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>3D Планировщик</title>
+<title>3D Конфигуратор</title>
 <link rel="icon" href="data:,">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,sans-serif;overflow:hidden;background:#e0e0e0}
-#sidebar{position:absolute;left:0;top:0;width:260px;height:100vh;background:white;box-shadow:2px 0 10px rgba(0,0,0,0.1);display:flex;flex-direction:column;z-index:100}
+body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
+#sidebar{position:absolute;left:0;top:0;width:250px;height:100vh;background:white;box-shadow:2px 0 10px rgba(0,0,0,0.1);display:flex;flex-direction:column;z-index:100}
 #sidebar-header{padding:12px 15px;background:#0044cc;color:white; display:flex; flex-direction:column; gap:6px;}
+#mode-switcher{font-size:11px; text-align:center;}
+#mode-switcher a{color:rgba(255,255,255,0.6); text-decoration:none; cursor:pointer; transition:0.2s;}
+#mode-switcher a:hover{color:white;}
+#mode-switcher a.active{color:white; font-weight:bold; text-decoration:underline;}
+#mode-switcher .sep{color:rgba(255,255,255,0.4); margin:0 4px;}
 #sidebar-header h1{font-size:14px;font-weight:bold}
 #help-btn{background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.5); color:white; width:28px; height:28px; border-radius:50%; font-size:16px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; align-self:flex-end;}
 #help-btn:hover{background:white; color:#0044cc;}
@@ -16,33 +21,42 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#e0e0e0}
 #search-box{padding:10px 15px;border-bottom:1px solid #ddd}
 #search-input{width:100%;padding:10px;border:2px solid #ddd;border-radius:6px;font-size:13px}
 #model-list{flex:1;overflow-y:auto;padding:8px}
-.model-item{padding:10px;margin-bottom:8px;background:#f8f9fa;border-radius:6px;cursor:grab;border:2px solid transparent;display:flex;justify-content:space-between;align-items:center;gap:8px; transition: 0.2s;}
+.model-item{padding:10px;margin-bottom:8px;background:#f8f9fa;border-radius:6px;cursor:pointer;border:2px solid transparent;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .model-item:hover{background:#e3f2fd;border-color:#0044cc}
-.model-item h3{font-size:12px;margin:0;flex:1;line-height:1.3;word-wrap:break-word;}
-.model-item:active{cursor:grabbing;}
+.model-item.active{background:#0044cc;color:white}
+.model-item h3{font-size:12px;margin:0;flex:1;line-height:1.3;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;max-width:calc(100% - 60px)}
 
-#main-area{position:absolute;left:260px;right:0;top:0;bottom:0;background:#ffffff}
+.model-buttons{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.add-model-btn, .add-top-btn {
+  width:28px; height:28px; color: white; border: none; border-radius: 4px;
+  cursor: pointer; font-weight: bold; font-size: 14px; line-height: 1;
+  transition: background 0.2s; display:flex;align-items:center;justify-content:center;
+}
+.add-model-btn { background: #0044cc; }
+.add-model-btn:hover { background: #003399; }
+.add-top-btn { background: #28a745; }
+.add-top-btn:hover { background: #218838; }
+
+#main-area{position:absolute;left:250px;right:0;top:0;bottom:0;background:#ffffff}
 #viewport{width:100%;height:100%}
 
 #controls-bar{
   position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
   background: rgba(255,255,255,0.95); padding: 8px 15px; border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; gap: 10px; align-items: center; z-index: 50;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; gap: 10px; align-items: center; z-index: 50;
 }
+body.mode-advanced #controls-bar{display:flex;}
 .ctrl-btn{
   padding: 8px 16px; background: #0044cc; color: white; border: none; border-radius: 6px;
-  cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; display: flex; align-items: center; gap: 6px;
+  cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s;
 }
 .ctrl-btn:hover{background: #003399;}
 .ctrl-btn.secondary{background: #f0f0f0; color: #333; border: 1px solid #ccc;}
 .ctrl-btn.secondary:hover{background: #e0e0e0;}
-.ctrl-btn.active{background: #28a745;}
 
-#settings-panel{
-  position:absolute;right:10px;top:60px;width:240px;background:white;
-  box-shadow:0 4px 12px rgba(0,0,0,0.1);border-radius:8px;overflow:hidden;z-index:50;
-  max-height: calc(100vh - 80px); display: flex; flex-direction: column;
-}
+#settings-panel{position:absolute;right:10px;top:60px;width:240px;background:white;box-shadow:0 4px 12px rgba(0,0,0,0.1);border-radius:8px;overflow:hidden;z-index:50;max-height: calc(100vh - 80px); display: none; flex-direction: column;}
+body.mode-basic #settings-panel{display:flex;}
+body.mode-advanced #settings-panel{display:flex;}
 .tabs{display:flex;border-bottom:2px solid #ddd;flex-wrap:wrap}
 .tab{flex:1 1 33%;padding:8px 5px;text-align:center;cursor:pointer;font-weight:bold;color:#666;font-size:10px;line-height:1.2;border-bottom:3px solid transparent}
 .tab.active{color:#0044cc;border-bottom-color:#0044cc}
@@ -67,6 +81,21 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#e0e0e0}
 #loading.show{display:block}
 .spinner{width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid #0044cc;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
 @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+
+#tooltip{
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,68,204,0.95); color: white; padding: 12px 20px; border-radius: 8px;
+  font-size: 13px; font-weight: bold; display: none; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+#tooltip.show{display:block;}
+
+#antresole-toggle{
+  margin: 10px; padding: 8px; background: #f0fff0; border: 2px solid #28a745; 
+  color: #28a745; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; 
+  transition: 0.2s; display: none;
+}
+body.mode-advanced #antresole-toggle{display:block;}
+#antresole-toggle.active{background: #28a745; color: white;}
 
 .modal-backdrop {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -107,21 +136,13 @@ kbd {
 }
 .modal-ok-btn:hover { background: #003399; }
 
-.settings-group { margin-bottom: 20px; }
-.settings-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; font-size: 14px; }
-.settings-group input[type="range"] { width: 100%; height: 6px; border-radius: 3px; background: #ddd; outline: none; }
-.settings-group input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none; width: 18px; height: 18px;
-  border-radius: 50%; background: #0044cc; cursor: pointer;
-}
-.settings-value { display: inline-block; margin-left: 10px; color: #0044cc; font-weight: bold; }
+body.mode-basic .add-top-btn { display: none; }
+body.mode-basic .add-model-btn { display: none; }
+body.mode-basic .model-item h3 { max-width: 100%; }
 
-/* Режим антресоли */
-#antresole-mode-btn {
-  margin: 0 10px 10px 10px; padding: 8px; background: #f0fff0; border: 2px solid #28a745; 
-  color: #28a745; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s;
-}
-#antresole-mode-btn.active { background: #28a745; color: white; }
+body.mode-advanced .add-top-btn { display: flex; }
+body.mode-advanced .add-model-btn { display: flex; }
+body.mode-advanced .model-item h3 { max-width: calc(100% - 60px); }
 
 @media (max-width: 600px) {
   .modal-content { padding: 18px; width: 95%; }
@@ -139,12 +160,19 @@ kbd {
 }
 </script>
 </head>
-<body>
+<body class="mode-basic">
 
 <div id="sidebar">
   <div id="sidebar-header">
-    <h1>Каталог мебели</h1>
-    <button id="help-btn" title="Показать инструкцию">?</button>
+    <div id="mode-switcher">
+      <a id="link-basic" class="active">Обычный</a>
+      <span class="sep">/</span>
+      <a id="link-advanced">Расширенный</a>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+      <h1>Каталог моделей</h1>
+      <button id="help-btn" title="Показать инструкцию">?</button>
+    </div>
   </div>
   <div id="search-box"><input type="text" id="search-input" placeholder="Поиск модели..."></div>
   <div id="model-list">
@@ -153,6 +181,7 @@ kbd {
       Загрузка...
     </div>
   </div>
+  <button id="antresole-toggle">🧲 Режим: Обычный шкаф</button>
 </div>
 
 <div id="main-area">
@@ -160,7 +189,7 @@ kbd {
   
   <div id="controls-bar">
     <button id="view-toggle-btn" class="ctrl-btn secondary">🔄 Вид сверху / Аксонометрия</button>
-    <button id="clear-scene-btn" class="ctrl-btn" style="background:#dc3545;">🗑️ Очистить сцену</button>
+    <button id="clear-scene-btn" class="ctrl-btn" style="background:#dc3545;">🗑️ Очистить</button>
   </div>
 
   <div id="settings-panel">
@@ -181,6 +210,8 @@ kbd {
     <button id="reset-btn">Вернуть материал</button>
     <button id="screenshot-btn">📷 Скачать изображение</button>
   </div>
+  
+  <div id="tooltip"></div>
 </div>
 
 <div id="loading"><div class="spinner"></div><div id="loading-text">Загрузка...</div></div>
@@ -188,17 +219,16 @@ kbd {
 <div id="instruction-modal" class="modal-backdrop">
   <div class="modal-content">
     <button class="modal-close" id="close-modal">&times;</button>
-    <h2>📖 Как пользоваться планировщиком</h2>
+    <h2>📖 Как пользоваться конфигуратором</h2>
     <ul class="instruction-list">
-      <li><strong>1. Размещение.</strong> Зажмите левую кнопку мыши на любой модели в каталоге слева и <strong>перетащите</strong> её на пол в 3D-сцене. Отпустите кнопку, чтобы поставить.</li>
-      <li><strong>2. Поворот.</strong> Кликните на размещенное изделие, чтобы выделить его (оно подсветится <strong>красным</strong>). Затем нажмите <strong>Правую кнопку мыши</strong> или клавишу <kbd>R</kbd>, чтобы повернуть его на 90°.</li>
-      <li><strong>3. Антресоли.</strong> Включите кнопку <strong>«Режим: Антресоль»</strong> в левой панели. Перетащите модель на сцену — она автоматически «примагнитится» к верху ближайшего шкафа.</li>
-      <li><strong>4. Вид сверху / Аксонометрия.</strong> Используйте кнопку вверху сцены для переключения между видом сверху (для удобной расстановки) и аксонометрией (для оценки внешнего вида и покраски).</li>
-      <li><strong>5. Покраска.</strong> Выделите деталь (или несколько с зажатым <kbd>Ctrl</kbd>) и выберите цвет справа. Галочка «Заменить весь цвет» покрасит всё изделие сразу.</li>
-      <li><strong>6. Сохранение.</strong> Нажмите «Скачать изображение», чтобы сохранить PNG-снимок текущего вида.</li>
+      <li><strong>Обычный режим.</strong> Кликните по модели в каталоге — она появится на сцене. Выделите деталь кликом и выберите цвет справа. Можно добавить только 1 изделие.</li>
+      <li><strong>Расширенный режим — расстановка.</strong> Нажмите ➕ рядом с моделью. Изделие появится в центре. Зажмите на нём левую кнопку мыши и перетащите в нужное место. Для поворота выделите изделие и нажмите <kbd>Правую кнопку мыши</kbd> или клавишу <kbd>R</kbd>.</li>
+      <li><strong>Антресоли.</strong> Включите кнопку «🧲 Режим: Антресоль» и добавьте модель — она автоматически встанет сверху на ближайший шкаф.</li>
+      <li><strong>Раскраска.</strong> Переключитесь в аксонометрию кнопкой «🔄 Вид сверху / Аксонометрия». Выделите деталь (или несколько с <kbd>Ctrl</kbd>) и выберите цвет.</li>
+      <li><strong>Сохранение.</strong> Нажмите «Скачать изображение» для PNG-снимка.</li>
     </ul>
     <div class="modal-note">
-      💡 <em>Технические детали (_NON) не окрашиваются. Детали _FAN окрашиваются только из вкладки «Покраска».</em>
+       <em>Детали _NON не окрашиваются. Детали _FAN — только из вкладки «Покраска».</em>
     </div>
     <button class="modal-ok-btn" id="modal-ok">Всё понятно!</button>
   </div>
@@ -279,37 +309,71 @@ let modelsData = [];
 let selectedObjects = []; 
 let sceneModels = []; 
 let nextModelId = 1;
-
-let isTopView = true;
+let currentMode = 'basic';
+let isTopView = false;
 let isAntresoleMode = false;
 
-// Для Drag & Drop
-let dragData = null;
+// Для перемещения в расширенном режиме
+let isDragging = false;
+let dragObject = null;
+let dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+let dragOffset = new THREE.Vector3();
+
+function setMode(mode) {
+  currentMode = mode;
+  document.body.className = mode === 'basic' ? 'mode-basic' : 'mode-advanced';
+  document.getElementById('link-basic').classList.toggle('active', mode === 'basic');
+  document.getElementById('link-advanced').classList.toggle('active', mode === 'advanced');
+  
+  if (sceneModels.length > 0) {
+    sceneModels.forEach(model => {
+      scene.remove(model.group);
+      model.group.traverse(c => { if(c.geometry) c.geometry.dispose(); });
+      model.meshes.forEach(m => originalMaterials.delete(m.uuid));
+    });
+    sceneModels = [];
+    allMeshes = [];
+    selectedObjects = [];
+  }
+  
+  if (mode === 'basic') {
+    isTopView = false;
+    updateCameraView();
+  } else {
+    isTopView = true;
+    updateCameraView();
+  }
+}
+
+document.getElementById('link-basic').addEventListener('click', (e) => {
+  e.preventDefault();
+  setMode('basic');
+});
+
+document.getElementById('link-advanced').addEventListener('click', (e) => {
+  e.preventDefault();
+  setMode('advanced');
+});
 
 function initScene(){
   const viewport = document.getElementById('viewport');
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xf0f0f0);
 
-  // Угловая комната
   const roomSize = 10000;
   const wallHeight = 3000;
   
-  // Пол
   const floorGeo = new THREE.PlaneGeometry(roomSize, roomSize);
   const floorMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.8 });
   const floor = new THREE.Mesh(floorGeo, floorMat);
   floor.rotation.x = -Math.PI / 2;
-  floor.receiveShadow = true;
   floor.name = "floor";
   scene.add(floor);
 
-  // Сетка на полу для ориентира
   const grid = new THREE.GridHelper(roomSize, 100, 0xcccccc, 0xe5e5e5);
   grid.position.y = 1;
   scene.add(grid);
 
-  // Левая стена (вдоль оси Z)
   const wallLeftGeo = new THREE.PlaneGeometry(roomSize, wallHeight);
   const wallMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
   const wallLeft = new THREE.Mesh(wallLeftGeo, wallMat);
@@ -318,7 +382,6 @@ function initScene(){
   wallLeft.name = "wall";
   scene.add(wallLeft);
 
-  // Правая стена (вдоль оси X)
   const wallRight = new THREE.Mesh(wallLeftGeo, wallMat);
   wallRight.position.set(roomSize / 2, wallHeight / 2, 0);
   wallRight.name = "wall";
@@ -328,20 +391,14 @@ function initScene(){
   renderer = new THREE.WebGLRenderer({antialias:true, logarithmicDepthBuffer:true, preserveDrawingBuffer:true});
   renderer.setSize(viewport.clientWidth, viewport.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
   viewport.appendChild(renderer.domElement);
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
-  controls.maxPolarAngle = Math.PI / 2 - 0.05; // Не даем камере уйти под пол
 
-  // Освещение
   scene.add(new THREE.AmbientLight(0xffffff, 0.6));
   const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
   dirLight.position.set(5000, 8000, 5000);
-  dirLight.castShadow = true;
-  dirLight.shadow.mapSize.width = 2048;
-  dirLight.shadow.mapSize.height = 2048;
   scene.add(dirLight);
 
   updateCameraView();
@@ -350,14 +407,12 @@ function initScene(){
 
 function updateCameraView() {
   if (isTopView) {
-    // Вид сверху (ортогональный или высокий перспективный)
     camera.position.set(0, 8000, 0);
     camera.lookAt(0, 0, 0);
     controls.target.set(0, 0, 0);
-    controls.enableRotate = false; // Блокируем вращение в виде сверху для удобства расстановки
+    controls.enableRotate = false;
     controls.update();
   } else {
-    // Аксонометрия
     camera.position.set(4000, 4000, 4000);
     camera.lookAt(0, 1000, 0);
     controls.target.set(0, 1000, 0);
@@ -392,14 +447,41 @@ function renderModelsList(models){
   models.forEach(model => {
     const div = document.createElement('div');
     div.className = 'model-item';
-    div.draggable = true; // Включаем Drag & Drop
-    div.innerHTML = `<h3>${model.name}</h3>`;
+    div.innerHTML = `
+      <h3>${model.name}</h3>
+      <div class="model-buttons">
+        <button class="add-model-btn" title="Добавить изделие">➕</button>
+        <button class="add-top-btn" title="Добавить антресоль">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 3L13 9H3L8 3Z" fill="white"/>
+          </svg>
+        </button>
+      </div>
+    `;
     
-    div.addEventListener('dragstart', (e) => {
-      dragData = model;
-      e.dataTransfer.effectAllowed = 'copy';
-      e.dataTransfer.setData('text/plain', JSON.stringify(model));
-    });
+    const addBtn = div.querySelector('.add-model-btn');
+    addBtn.onclick = (e) => { 
+      e.stopPropagation(); 
+      addModelToScene(model, div, false); 
+    };
+    
+    const addTopBtn = div.querySelector('.add-top-btn');
+    addTopBtn.onclick = (e) => { 
+      e.stopPropagation(); 
+      addModelToScene(model, div, true); 
+    };
+    
+    div.onclick = (e) => { 
+      if (e.target.closest('.add-model-btn') || e.target.closest('.add-top-btn')) return;
+      
+      if (currentMode === 'basic') {
+        if (sceneModels.length > 0) {
+          const currentId = sceneModels[0].id;
+          removeModelFromScene(currentId);
+        }
+        addModelToScene(model, div, false);
+      }
+    };
     
     listEl.appendChild(div);
   });
@@ -412,86 +494,36 @@ document.getElementById('search-input').addEventListener('input', (e) => {
   ));
 });
 
-// === DRAG & DROP НА СЦЕНУ ===
-const viewport = document.getElementById('viewport');
-
-viewport.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'copy';
-});
-
-viewport.addEventListener('drop', (e) => {
-  e.preventDefault();
-  if (!dragData) return;
-
-  const rect = viewport.getBoundingClientRect();
-  const mouse = new THREE.Vector2(
-    ((e.clientX - rect.left) / rect.width) * 2 - 1,
-    -((e.clientY - rect.top) / rect.height) * 2 + 1
-  );
-
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(mouse, camera);
-
-  // Ищем пересечение с полом или верхом других шкафов
-  const intersects = raycaster.intersectObjects(scene.children, true);
-  let dropPoint = new THREE.Vector3(0, 0, 0);
-  let foundSurface = false;
-
-  for (let hit of intersects) {
-    if (hit.object.name === 'floor' || hit.object.name === 'wall') continue; // Игнорируем стены для простоты, или можно доработать
-    
-    // Если это верхняя грань существующего шкафа
-    const box = new THREE.Box3().setFromObject(hit.object);
-    if (hit.point.y > box.min.y + (box.max.y - box.min.y) * 0.8) {
-      dropPoint.copy(hit.point);
-      foundSurface = true;
-      break;
-    }
-  }
-
-  if (!foundSurface) {
-    // Если не попали в шкаф, ставим на пол
-    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    const target = new THREE.Vector3();
-    raycaster.ray.intersectPlane(plane, target);
-    if (target) dropPoint.copy(target);
-  }
-
-  placeModel(dragData, dropPoint, isAntresoleMode);
-  dragData = null;
-});
-
-function placeModel(modelData, position, forceAntresole) {
-  showLoading(`Размещение: ${modelData.name}`);
-  const modelUrl = /^https?:\/\//i.test(modelData.file) ? modelData.file : RAW_BASE + modelData.file;
+function addModelToScene(model, element, addOnTop){
+  showLoading(`Добавление: ${model.name}`);
+  const modelUrl = /^https?:\/\//i.test(model.file) ? model.file : RAW_BASE + model.file;
   const loader = new GLTFLoader();
   
   loader.load(
     modelUrl,
     (gltf) => {
       const group = gltf.scene;
+      const isAntresole = addOnTop || (isAntresoleMode && currentMode === 'advanced');
       
-      // Определяем, является ли модель антресолью (по имени или флагу)
-      const isAntresole = forceAntresole || modelData.name.toLowerCase().includes('антресоль');
+      if (currentMode === 'basic') {
+        group.position.set(0, 0, 0);
+      } else {
+        group.position.set(0, 0, 0);
+      }
       
-      group.position.copy(position);
+      scene.add(group);
+      group.updateMatrixWorld(true);
       
-      // Если это антресоль, пытаемся примагнитить к ближайшему шкафу
-      if (isAntresole) {
+      if (isAntresole && currentMode === 'advanced') {
         snapToCabinet(group);
       } else {
-        // Для обычных шкафов выравниваем по полу (Y = половина высоты, если центр в середине, или корректируем)
         const box = new THREE.Box3().setFromObject(group);
-        group.position.y = position.y - box.min.y; 
+        group.position.y = -box.min.y;
       }
-
-      group.updateMatrixWorld(true);
-      scene.add(group);
       
       const modelEntry = {
         id: nextModelId++,
-        name: modelData.name,
+        name: model.name,
         group: group,
         meshes: [],
         isTop: isAntresole
@@ -499,8 +531,6 @@ function placeModel(modelData, position, forceAntresole) {
       
       group.traverse((child) => {
         if(child.isMesh){
-          child.castShadow = true;
-          child.receiveShadow = true;
           allMeshes.push(child);
           modelEntry.meshes.push(child);
           
@@ -524,9 +554,9 @@ function placeModel(modelData, position, forceAntresole) {
       sceneModels.push(modelEntry);
       hideLoading();
       
-      // Автоматически переключаем на аксонометрию при первом добавлении, если мы в виде сверху
-      if (isTopView && sceneModels.length === 1) {
-        toggleView();
+      if (currentMode === 'advanced' && sceneModels.length === 1) {
+        showTooltip(' Зажмите ЛКМ на изделии и перетащите. Для поворота: выделите и нажмите ПКМ или R');
+        setTimeout(() => hideTooltip(), 5000);
       }
     },
     undefined,
@@ -546,11 +576,10 @@ function snapToCabinet(antresoleGroup) {
   sceneModels.forEach(m => {
     if (!m.isTop) {
       const mBox = new THREE.Box3().setFromObject(m.group);
-      // Проверяем, находится ли антресоль примерно над этим шкафом по X и Z
       const dx = Math.abs(antBox.min.x - mBox.min.x);
       const dz = Math.abs(antBox.min.z - mBox.min.z);
       
-      if (dx < 500 && dz < 500) { // Допуск 500мм
+      if (dx < 1000 && dz < 1000) {
         const dist = Math.sqrt(dx*dx + dz*dz);
         if (dist < minDist) {
           minDist = dist;
@@ -564,50 +593,139 @@ function snapToCabinet(antresoleGroup) {
     const targetBox = new THREE.Box3().setFromObject(bestMatch.group);
     const antLocalBox = new THREE.Box3().setFromObject(antresoleGroup);
     
-    // Примагничиваем X и Z к центру шкафа
     antresoleGroup.position.x = bestMatch.group.position.x;
     antresoleGroup.position.z = bestMatch.group.position.z;
-    
-    // Примагничиваем Y к верху шкафа
     antresoleGroup.position.y = targetBox.max.y - antLocalBox.min.y;
     antresoleGroup.updateMatrixWorld(true);
   }
 }
 
-// === ПОВОРОТ ПРАВОЙ КНОПКОЙ МЫШИ ===
-viewport.addEventListener('contextmenu', (e) => {
-  e.preventDefault(); // Отключаем стандартное меню браузера
+function removeModelFromScene(id){
+  const index = sceneModels.findIndex(m => m.id === id);
+  if (index === -1) return;
   
-  if (selectedObjects.length === 1) {
-    // Находим родительскую группу выбранного меша
-    const selectedMesh = selectedObjects[0];
-    const modelEntry = sceneModels.find(m => m.meshes.includes(selectedMesh));
+  const model = sceneModels[index];
+  
+  if (!model.isTop) {
+    const topModel = sceneModels.find(m => m.isTop && m.parentModel === model);
+    if (topModel) {
+      scene.remove(topModel.group);
+      topModel.group.traverse(c => { if(c.geometry) c.geometry.dispose(); });
+      allMeshes = allMeshes.filter(m => !topModel.meshes.includes(m));
+      topModel.meshes.forEach(m => originalMaterials.delete(m.uuid));
+      const topIndex = sceneModels.findIndex(m => m.id === topModel.id);
+      if (topIndex !== -1) sceneModels.splice(topIndex, 1);
+    }
+  }
+  
+  scene.remove(model.group);
+  model.group.traverse(c => { if(c.geometry) c.geometry.dispose(); });
+  
+  allMeshes = allMeshes.filter(m => !model.meshes.includes(m));
+  selectedObjects = selectedObjects.filter(m => !model.meshes.includes(m));
+  model.meshes.forEach(m => originalMaterials.delete(m.uuid));
+  
+  sceneModels.splice(index, 1);
+}
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+const viewport = document.getElementById('viewport');
+
+viewport.addEventListener('mousedown', (event) => {
+  if (event.button !== 0) return;
+  if (currentMode !== 'advanced') return;
+  
+  const rect = viewport.getBoundingClientRect();
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(allMeshes, true);
+
+  if (intersects.length > 0) {
+    const clickedMesh = intersects[0].object;
+    const modelEntry = sceneModels.find(m => m.meshes.includes(clickedMesh));
     
     if (modelEntry) {
-      // Поворачиваем всю группу на 90 градусов (PI/2)
-      modelEntry.group.rotation.y += Math.PI / 2;
-      modelEntry.group.updateMatrixWorld(true);
+      isDragging = true;
+      dragObject = modelEntry;
+      controls.enabled = false;
       
-      // Если это антресоль, после поворота нужно перепроверить привязку
-      if (modelEntry.isTop) {
-        snapToCabinet(modelEntry.group);
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const target = new THREE.Vector3();
+      raycaster.ray.intersectPlane(plane, target);
+      
+      if (target) {
+        dragOffset.subVectors(modelEntry.group.position, target);
       }
     }
   }
 });
 
-// Также добавляем поворот по клавише R для удобства
+viewport.addEventListener('mousemove', (event) => {
+  if (!isDragging || !dragObject) return;
+  
+  const rect = viewport.getBoundingClientRect();
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  const target = new THREE.Vector3();
+  raycaster.ray.intersectPlane(plane, target);
+  
+  if (target) {
+    dragObject.group.position.x = target.x + dragOffset.x;
+    dragObject.group.position.z = target.z + dragOffset.z;
+    
+    if (dragObject.isTop) {
+      snapToCabinet(dragObject.group);
+    }
+  }
+});
+
+viewport.addEventListener('mouseup', () => {
+  if (isDragging) {
+    isDragging = false;
+    dragObject = null;
+    controls.enabled = true;
+  }
+});
+
+viewport.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  
+  if (currentMode !== 'advanced') return;
+  
+  if (selectedObjects.length === 1) {
+    const selectedMesh = selectedObjects[0];
+    const modelEntry = sceneModels.find(m => m.meshes.includes(selectedMesh));
+    
+    if (modelEntry) {
+      modelEntry.group.rotation.y += Math.PI / 2;
+      modelEntry.group.updateMatrixWorld(true);
+      
+      if (modelEntry.isTop) {
+        snapToCabinet(modelEntry.group);
+      }
+      
+      showTooltip('🔄 Изделие повёрнуто на 90°');
+      setTimeout(() => hideTooltip(), 2000);
+    }
+  }
+});
+
 window.addEventListener('keydown', (e) => {
-  if (e.key.toLowerCase() === 'r' && selectedObjects.length === 1) {
+  if (e.key.toLowerCase() === 'r' && selectedObjects.length === 1 && currentMode === 'advanced') {
     viewport.dispatchEvent(new Event('contextmenu'));
   }
 });
 
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
 viewport.addEventListener('click', (event) => {
   if (event.target !== renderer.domElement) return;
+  if (isDragging) return;
 
   const rect = viewport.getBoundingClientRect();
   mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -616,7 +734,6 @@ viewport.addEventListener('click', (event) => {
   raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObjects(allMeshes, true);
 
-  // Снимаем старую подсветку (красный цвет)
   allMeshes.forEach(m => {
     const mats = Array.isArray(m.material) ? m.material : [m.material];
     mats.forEach(mt => { if(mt.emissive) mt.emissive.setHex(0x000000); });
@@ -634,11 +751,15 @@ viewport.addEventListener('click', (event) => {
       selectedObjects = [clickedObject];
     }
 
-    // Подсвечиваем красным (0xff0000)
     selectedObjects.forEach(obj => {
       const selMats = Array.isArray(obj.material) ? obj.material : [obj.material];
       selMats.forEach(m => { if(m.emissive) m.emissive.setHex(0xff0000); });
     });
+    
+    if (currentMode === 'advanced' && selectedObjects.length === 1) {
+      showTooltip('💡 ПКМ или R — повернуть. Зажмите ЛКМ — переместить');
+      setTimeout(() => hideTooltip(), 3000);
+    }
   }
 });
 
@@ -646,15 +767,14 @@ function toggleView() {
   isTopView = !isTopView;
   updateCameraView();
   const btn = document.getElementById('view-toggle-btn');
-  btn.textContent = isTopView ? '🔄 Вид сверху / Аксонометрия' : '🔄 Аксонометрия / Вид сверху';
-  btn.classList.toggle('active', !isTopView);
+  btn.textContent = isTopView ? '🔄 Вид сверху' : '🔄 Аксонометрия';
 }
 
 document.getElementById('view-toggle-btn').addEventListener('click', toggleView);
 
 document.getElementById('clear-scene-btn').addEventListener('click', () => {
   if (sceneModels.length === 0) return;
-  if (!confirm('Удалить все модели из сцены?')) return;
+  if (!confirm('Удалить все модели?')) return;
   
   sceneModels.forEach(model => {
     scene.remove(model.group);
@@ -664,11 +784,6 @@ document.getElementById('clear-scene-btn').addEventListener('click', () => {
   sceneModels = [];
   allMeshes = [];
   selectedObjects = [];
-  
-  camera.position.set(0, 8000, 0);
-  camera.lookAt(0, 0, 0);
-  controls.target.set(0, 0, 0);
-  controls.update();
 });
 
 const textureLoader = new THREE.TextureLoader();
@@ -679,12 +794,12 @@ function applyMaterial(value, category) {
   let group = [];
   
   if(applyToAll){
-    if(allMeshes.length === 0){ alert('Сначала добавьте модель в сцену'); return; }
+    if(allMeshes.length === 0){ alert('Сначала добавьте модель'); return; }
     group = allMeshes;
     applyToAllCheckbox.checked = false;
   }else{
     if(selectedObjects.length === 0){
-      alert('Сначала кликните по детали (или по нескольким с зажатым Ctrl) в 3D-сцене');
+      alert('Сначала кликните по детали');
       return;
     }
     group = [...selectedObjects];
@@ -743,7 +858,6 @@ function resetModel(){
 document.getElementById('reset-btn').addEventListener('click', resetModel);
 
 document.getElementById('screenshot-btn').addEventListener('click', () => {
-  // Временно снимаем выделение для чистого снимка
   allMeshes.forEach(m => {
     const mats = Array.isArray(m.material) ? m.material : [m.material];
     mats.forEach(mt => { if(mt.emissive) mt.emissive.setHex(0x000000); });
@@ -753,7 +867,7 @@ document.getElementById('screenshot-btn').addEventListener('click', () => {
   const dataUrl = renderer.domElement.toDataURL('image/png');
   const a = document.createElement('a');
   a.href = dataUrl;
-  a.download = 'plan-' + Date.now() + '.png';
+  a.download = 'model-' + Date.now() + '.png';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -783,6 +897,16 @@ function hideLoading(){
   document.getElementById('loading').classList.remove('show');
 }
 
+function showTooltip(text){
+  const tooltip = document.getElementById('tooltip');
+  tooltip.textContent = text;
+  tooltip.classList.add('show');
+}
+
+function hideTooltip(){
+  document.getElementById('tooltip').classList.remove('show');
+}
+
 function switchTab(activeId, contentId){
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -806,17 +930,11 @@ window.addEventListener('resize', () => {
   renderer.setSize(v.clientWidth, v.clientHeight);
 });
 
-// UI для режима антресоли
-const antresoleBtn = document.createElement('button');
-antresoleBtn.id = 'antresole-mode-btn';
-antresoleBtn.innerHTML = '🧲 Режим: Обычный шкаф';
-antresoleBtn.style.margin = '10px';
-document.getElementById('sidebar').insertBefore(antresoleBtn, document.getElementById('search-box'));
-
+const antresoleBtn = document.getElementById('antresole-toggle');
 antresoleBtn.addEventListener('click', () => {
   isAntresoleMode = !isAntresoleMode;
   antresoleBtn.classList.toggle('active', isAntresoleMode);
-  antresoleBtn.innerHTML = isAntresoleMode ? '🧲 Режим: Антресоль (вкл)' : '🧲 Режим: Обычный шкаф';
+  antresoleBtn.textContent = isAntresoleMode ? '🧲 Режим: Антресоль' : '🧲 Режим: Обычный шкаф';
 });
 
 const modal = document.getElementById('instruction-modal');
