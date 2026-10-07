@@ -2,18 +2,13 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>3D Конфигуратор</title>
+<title>3D Планировщик</title>
 <link rel="icon" href="data:,">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
-#sidebar{position:absolute;left:0;top:0;width:250px;height:100vh;background:white;box-shadow:2px 0 10px rgba(0,0,0,0.1);display:flex;flex-direction:column;z-index:100}
+body{font-family:Arial,sans-serif;overflow:hidden;background:#e0e0e0}
+#sidebar{position:absolute;left:0;top:0;width:260px;height:100vh;background:white;box-shadow:2px 0 10px rgba(0,0,0,0.1);display:flex;flex-direction:column;z-index:100}
 #sidebar-header{padding:12px 15px;background:#0044cc;color:white; display:flex; flex-direction:column; gap:6px;}
-#mode-switcher{font-size:11px; text-align:center;}
-#mode-switcher a{color:rgba(255,255,255,0.6); text-decoration:none; cursor:pointer; transition:0.2s;}
-#mode-switcher a:hover{color:white;}
-#mode-switcher a.active{color:white; font-weight:bold; text-decoration:underline;}
-#mode-switcher .sep{color:rgba(255,255,255,0.4); margin:0 4px;}
 #sidebar-header h1{font-size:14px;font-weight:bold}
 #help-btn{background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.5); color:white; width:28px; height:28px; border-radius:50%; font-size:16px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; align-self:flex-end;}
 #help-btn:hover{background:white; color:#0044cc;}
@@ -21,26 +16,33 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 #search-box{padding:10px 15px;border-bottom:1px solid #ddd}
 #search-input{width:100%;padding:10px;border:2px solid #ddd;border-radius:6px;font-size:13px}
 #model-list{flex:1;overflow-y:auto;padding:8px}
-.model-item{padding:10px;margin-bottom:8px;background:#f8f9fa;border-radius:6px;cursor:pointer;border:2px solid transparent;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.model-item{padding:10px;margin-bottom:8px;background:#f8f9fa;border-radius:6px;cursor:grab;border:2px solid transparent;display:flex;justify-content:space-between;align-items:center;gap:8px; transition: 0.2s;}
 .model-item:hover{background:#e3f2fd;border-color:#0044cc}
-.model-item.active{background:#0044cc;color:white}
-.model-item h3{font-size:12px;margin:0;flex:1;line-height:1.3;word-wrap:break-word;overflow-wrap:break-word;hyphens:auto;max-width:calc(100% - 60px)}
+.model-item h3{font-size:12px;margin:0;flex:1;line-height:1.3;word-wrap:break-word;}
+.model-item:active{cursor:grabbing;}
 
-.model-buttons{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
-.add-model-btn, .add-top-btn {
-  width:28px; height:28px; color: white; border: none; border-radius: 4px;
-  cursor: pointer; font-weight: bold; font-size: 14px; line-height: 1;
-  transition: background 0.2s; display:flex;align-items:center;justify-content:center;
-}
-.add-model-btn { background: #0044cc; }
-.add-model-btn:hover { background: #003399; }
-.add-top-btn { background: #28a745; }
-.add-top-btn:hover { background: #218838; }
-
-#main-area{position:absolute;left:250px;right:250px;top:0;bottom:0;background:#ffffff}
+#main-area{position:absolute;left:260px;right:0;top:0;bottom:0;background:#ffffff}
 #viewport{width:100%;height:100%}
 
-#settings-panel{position:absolute;right:0;top:0;width:250px;height:100vh;background:white;box-shadow:-2px 0 10px rgba(0,0,0,0.1);display:flex;flex-direction:column;z-index:100}
+#controls-bar{
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(255,255,255,0.95); padding: 8px 15px; border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; gap: 10px; align-items: center; z-index: 50;
+}
+.ctrl-btn{
+  padding: 8px 16px; background: #0044cc; color: white; border: none; border-radius: 6px;
+  cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; display: flex; align-items: center; gap: 6px;
+}
+.ctrl-btn:hover{background: #003399;}
+.ctrl-btn.secondary{background: #f0f0f0; color: #333; border: 1px solid #ccc;}
+.ctrl-btn.secondary:hover{background: #e0e0e0;}
+.ctrl-btn.active{background: #28a745;}
+
+#settings-panel{
+  position:absolute;right:10px;top:60px;width:240px;background:white;
+  box-shadow:0 4px 12px rgba(0,0,0,0.1);border-radius:8px;overflow:hidden;z-index:50;
+  max-height: calc(100vh - 80px); display: flex; flex-direction: column;
+}
 .tabs{display:flex;border-bottom:2px solid #ddd;flex-wrap:wrap}
 .tab{flex:1 1 33%;padding:8px 5px;text-align:center;cursor:pointer;font-weight:bold;color:#666;font-size:10px;line-height:1.2;border-bottom:3px solid transparent}
 .tab.active{color:#0044cc;border-bottom-color:#0044cc}
@@ -48,59 +50,23 @@ body{font-family:Arial,sans-serif;overflow:hidden;background:#ffffff}
 .tab-content.active{display:block}
 .texture-item{display:flex;align-items:center;margin-bottom:6px;padding:5px;border:1px solid #eee;border-radius:4px;cursor:pointer;transition:background 0.15s}
 .texture-item:hover{background:#f0f8ff;border-color:#0044cc}
-.texture-item img{width:40px;height:40px;object-fit:cover;border-radius:3px;margin-right:8px;border:1px solid #ccc;flex-shrink:0}
+.texture-item img{width:36px;height:36px;object-fit:cover;border-radius:3px;margin-right:8px;border:1px solid #ccc;flex-shrink:0}
 .texture-name{font-size:11px;font-weight:bold}
 
-.checkbox-container{margin:8px 10px;padding:10px;background:#fff8e1;border:2px solid #ffc107;border-radius:6px;cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px;transition:background 0.2s;}
+.checkbox-container{margin:8px 10px;padding:8px;background:#fff8e1;border:2px solid #ffc107;border-radius:6px;cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px;transition:background 0.2s;}
 .checkbox-container:hover{background:#fff3c4}
-.checkbox-container input[type="checkbox"]{width:18px;height:18px;cursor:pointer;flex-shrink:0;accent-color:#0044cc;}
-.checkbox-container label{cursor:pointer;font-size:12px;font-weight:bold;color:#333;line-height:1.3;}
+.checkbox-container input[type="checkbox"]{width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#0044cc;}
+.checkbox-container label{cursor:pointer;font-size:11px;font-weight:bold;color:#333;line-height:1.2;}
 
-#reset-btn{margin:10px;padding:10px;background:#f5deb3;border:2px solid #d4a76a;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px}
+#reset-btn{margin:10px;padding:8px;background:#f5deb3;border:2px solid #d4a76a;border-radius:6px;cursor:pointer;font-weight:bold;font-size:12px}
 #reset-btn:hover{background:#f0d59a}
-#screenshot-btn{margin:0 10px 10px 10px;padding:10px;background:#e3f2fd;border:2px solid #0044cc;color:#0044cc;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px}
+#screenshot-btn{margin:0 10px 10px 10px;padding:8px;background:#e3f2fd;border:2px solid #0044cc;color:#0044cc;border-radius:6px;cursor:pointer;font-weight:bold;font-size:12px}
 #screenshot-btn:hover{background:#c8e3fc}
-
-.ruler-controls{display:flex;gap:5px;margin:0 10px 10px 10px}
-#ruler-btn{flex:1;padding:10px;background:#f0f0f0;border:2px solid #999;color:#333;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px;transition:0.2s}
-#ruler-btn:hover{background:#e0e0e0}
-#ruler-btn.active{background:#0044cc;color:white;border-color:#003399}
-#ruler-settings-btn{width:36px;height:36px;background:#f0f0f0;border:2px solid #999;border-radius:6px;cursor:pointer;font-size:18px;transition:0.2s;display:flex;align-items:center;justify-content:center}
-#ruler-settings-btn:hover{background:#e0e0e0}
 
 #loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);color:white;padding:25px;border-radius:10px;z-index:200;display:none;text-align:center}
 #loading.show{display:block}
 .spinner{width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid #0044cc;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
 @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-
-#scene-list-container {
-  padding: 10px; border-top: 2px solid #ddd; background: #f8f9fa; 
-  max-height: 30vh; overflow-y: auto; flex-shrink: 0;
-}
-.scene-item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 6px; background: white; border-radius: 4px; margin-bottom: 4px;
-  border: 1px solid #ddd; font-size: 11px; transition: background 0.2s;
-  cursor: grab;
-}
-.scene-item:hover { background: #f0f8ff; }
-.scene-item.dragging { opacity: 0.4; background: #e3f2fd; border: 2px dashed #0044cc; }
-.scene-item.drag-over { border-top: 3px solid #0044cc; }
-.scene-item.top-item { background: #f0fff0; border-left: 3px solid #28a745; }
-.scene-item button {
-  background: #ff4444; color: white; border: none; border-radius: 3px;
-  padding: 3px 6px; cursor: pointer; font-size: 10px; transition: background 0.2s;
-}
-.scene-item button:hover { background: #cc0000; }
-.scene-actions { display: flex; gap: 5px; margin-top: 8px; }
-#clear-scene-btn, #clear-rulers-btn {
-  flex: 1; padding: 6px; border-radius: 4px; cursor: pointer; 
-  font-weight: bold; font-size: 11px; transition: 0.2s; border: 2px solid;
-}
-#clear-scene-btn { background: #f5deb3; border-color: #d4a76a; color: #333; }
-#clear-scene-btn:hover { background: #f0d59a; }
-#clear-rulers-btn { background: #ffe0e0; border-color: #ff6666; color: #990000; }
-#clear-rulers-btn:hover { background: #ffd0d0; }
 
 .modal-backdrop {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -150,22 +116,12 @@ kbd {
 }
 .settings-value { display: inline-block; margin-left: 10px; color: #0044cc; font-weight: bold; }
 
-/* === РЕЖИМЫ === */
-body.mode-basic .add-top-btn { display: none; }
-body.mode-basic .add-model-btn { display: none; }
-body.mode-basic .model-item h3 { max-width: 100%; }
-body.mode-basic #scene-list-container { display: none; }
-body.mode-basic #ruler-btn,
-body.mode-basic #ruler-settings-btn,
-body.mode-basic #clear-rulers-btn { display: none; }
-
-body.mode-advanced .add-top-btn { display: flex; }
-body.mode-advanced .add-model-btn { display: flex; }
-body.mode-advanced .model-item h3 { max-width: calc(100% - 60px); }
-body.mode-advanced #scene-list-container { display: block; }
-body.mode-advanced #ruler-btn,
-body.mode-advanced #ruler-settings-btn,
-body.mode-advanced #clear-rulers-btn { display: inline-flex; }
+/* Режим антресоли */
+#antresole-mode-btn {
+  margin: 0 10px 10px 10px; padding: 8px; background: #f0fff0; border: 2px solid #28a745; 
+  color: #28a745; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s;
+}
+#antresole-mode-btn.active { background: #28a745; color: white; }
 
 @media (max-width: 600px) {
   .modal-content { padding: 18px; width: 95%; }
@@ -183,19 +139,12 @@ body.mode-advanced #clear-rulers-btn { display: inline-flex; }
 }
 </script>
 </head>
-<body class="mode-basic">
+<body>
 
 <div id="sidebar">
   <div id="sidebar-header">
-    <div id="mode-switcher">
-      <a id="link-basic" class="active">Обычный</a>
-      <span class="sep">/</span>
-      <a id="link-advanced">Расширенный</a>
-    </div>
-    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-      <h1>Каталог моделей</h1>
-      <button id="help-btn" title="Показать инструкцию">?</button>
-    </div>
+    <h1>Каталог мебели</h1>
+    <button id="help-btn" title="Показать инструкцию">?</button>
   </div>
   <div id="search-box"><input type="text" id="search-input" placeholder="Поиск модели..."></div>
   <div id="model-list">
@@ -204,43 +153,34 @@ body.mode-advanced #clear-rulers-btn { display: inline-flex; }
       Загрузка...
     </div>
   </div>
-  
-  <div id="scene-list-container">
-    <h3 style="font-size:12px; margin-bottom:8px; color:#333; display:flex; justify-content:space-between; align-items:center;">
-      <span>Добавлено в сцену:</span>
-      <span id="scene-count" style="background:#0044cc; color:white; padding:2px 5px; border-radius:8px; font-size:10px;">0</span>
-    </h3>
-    <div id="scene-list"></div>
-    <div class="scene-actions">
-      <button id="clear-scene-btn">Очистить сцену</button>
-      <button id="clear-rulers-btn">Удалить линейки</button>
-    </div>
-  </div>
 </div>
 
-<div id="main-area"><div id="viewport"></div></div>
+<div id="main-area">
+  <div id="viewport"></div>
+  
+  <div id="controls-bar">
+    <button id="view-toggle-btn" class="ctrl-btn secondary">🔄 Вид сверху / Аксонометрия</button>
+    <button id="clear-scene-btn" class="ctrl-btn" style="background:#dc3545;">🗑️ Очистить сцену</button>
+  </div>
 
-<div id="settings-panel">
-  <div class="tabs">
-    <div class="tab active" id="tab-standard">Стандартные</div>
-    <div class="tab" id="tab-fantasy">Фантазийные</div>
-    <div class="tab" id="tab-paint">Покраска</div>
+  <div id="settings-panel">
+    <div class="tabs">
+      <div class="tab active" id="tab-standard">Стандартные</div>
+      <div class="tab" id="tab-fantasy">Фантазийные</div>
+      <div class="tab" id="tab-paint">Покраска</div>
+    </div>
+    <div id="standard" class="tab-content active"><div id="standard-list"></div></div>
+    <div id="fantasy" class="tab-content"><div id="fantasy-list"></div></div>
+    <div id="paint" class="tab-content"><div id="paint-list"></div></div>
+    
+    <div class="checkbox-container">
+      <input type="checkbox" id="apply-to-all">
+      <label for="apply-to-all">Заменить весь цвет</label>
+    </div>
+    
+    <button id="reset-btn">Вернуть материал</button>
+    <button id="screenshot-btn">📷 Скачать изображение</button>
   </div>
-  <div id="standard" class="tab-content active"><div id="standard-list"></div></div>
-  <div id="fantasy" class="tab-content"><div id="fantasy-list"></div></div>
-  <div id="paint" class="tab-content"><div id="paint-list"></div></div>
-  
-  <div class="checkbox-container">
-    <input type="checkbox" id="apply-to-all">
-    <label for="apply-to-all">Заменить весь цвет</label>
-  </div>
-  
-  <button id="reset-btn">Вернуть материал</button>
-  <div class="ruler-controls">
-    <button id="ruler-btn">📏 Линейка (выкл)</button>
-    <button id="ruler-settings-btn" title="Настройки">⚙️</button>
-  </div>
-  <button id="screenshot-btn">Скачать изображение</button>
 </div>
 
 <div id="loading"><div class="spinner"></div><div id="loading-text">Загрузка...</div></div>
@@ -248,40 +188,19 @@ body.mode-advanced #clear-rulers-btn { display: inline-flex; }
 <div id="instruction-modal" class="modal-backdrop">
   <div class="modal-content">
     <button class="modal-close" id="close-modal">&times;</button>
-    <h2>📖 Как пользоваться конфигуратором</h2>
+    <h2>📖 Как пользоваться планировщиком</h2>
     <ul class="instruction-list">
-      <li><strong>Режимы работы.</strong> Сверху над каталогом есть ссылки <strong>«Обычный / Расширенный»</strong>. В <strong>Обычном</strong> режиме — просто кликните по модели в каталоге, она сразу появится на сцене. Можно добавить только 1 изделие и раскрасить его. В <strong>Расширенном</strong> режиме — используйте кнопки ➕ и ⬆️ для добавления нескольких изделий и антресолей, перетаскивайте их в списке, используйте линейку и настройки.</li>
-      <li><strong>1. Добавление изделий (Расширенный режим).</strong> Нажмите синюю кнопку <strong>➕</strong> рядом с моделью. Первое изделие появится в центре сцены, каждое следующее добавится справа от предыдущего. Максимум 5 изделий. В Обычном режиме — просто кликните по карточке модели.</li>
-      <li><strong>2. Антресоли.</strong> Нажмите зелёную кнопку <strong>со стрелкой вверх</strong> — антресоль автоматически встанет сверху на последнее добавленное изделие, у которого ещё нет антресоли. Максимум 5 антресолей.</li>
-      <li><strong>3. Вращение и масштаб.</strong> Зажмите левую кнопку мыши и двигайте для вращения сцены. Колесико мыши — приближение/отдаление.</li>
-      <li><strong>4. Выделение деталей.</strong> Кликните <strong>левой кнопкой мыши</strong> по детали на 3D-модели — она подсветится. Зажмите <kbd>Ctrl</kbd> (или <kbd>Cmd</kbd> на Mac) для выделения нескольких деталей. Затем выберите цвет или текстуру на правой панели. Красится только выбранная деталь.</li>
-      <li><strong>5. Перестановка изделий.</strong> В списке <strong>«Добавлено в сцену»</strong> зажмите левую кнопку мыши на любом изделии и перетащите его на нужное место. Изделия на сцене автоматически перестроятся в новом порядке. Антресоли перемещаются вместе со своими шкафами.</li>
-      <li><strong>6. Покраска всего изделия.</strong> Включите галочку «Заменить весь цвет» — цвет применится ко всем деталям сразу. Галочка автоматически снимется после применения.</li>
-      <li><strong>7. Линейка.</strong> Нажмите кнопку <strong>«📏 Линейка»</strong>. Кликните на первую точку модели, затем на вторую. Двигайте мышь в любую сторону — выноска с размером будет следовать за курсором. Кликните третий раз, чтобы зафиксировать размер. Можно ставить сколько угодно линеек из одной точки.</li>
-      <li><strong>8. Настройки.</strong> Нажмите <strong>⚙️</strong> рядом с кнопкой линейки. Здесь можно настроить размер текста (75–300 px) и расстояние между изделиями (0–200). Изменение расстояния мгновенно переставляет модели на сцене.</li>
-      <li><strong>9. Скачать изображение.</strong> Нажмите кнопку «Скачать изображение» — сохранится PNG-снимок текущего вида сцены.</li>
-      <li><strong>10. Очистка.</strong> «Очистить сцену» удаляет все модели. «Удалить линейки» убирает только размеры, оставляя модели.</li>
+      <li><strong>1. Размещение.</strong> Зажмите левую кнопку мыши на любой модели в каталоге слева и <strong>перетащите</strong> её на пол в 3D-сцене. Отпустите кнопку, чтобы поставить.</li>
+      <li><strong>2. Поворот.</strong> Кликните на размещенное изделие, чтобы выделить его (оно подсветится <strong>красным</strong>). Затем нажмите <strong>Правую кнопку мыши</strong> или клавишу <kbd>R</kbd>, чтобы повернуть его на 90°.</li>
+      <li><strong>3. Антресоли.</strong> Включите кнопку <strong>«Режим: Антресоль»</strong> в левой панели. Перетащите модель на сцену — она автоматически «примагнитится» к верху ближайшего шкафа.</li>
+      <li><strong>4. Вид сверху / Аксонометрия.</strong> Используйте кнопку вверху сцены для переключения между видом сверху (для удобной расстановки) и аксонометрией (для оценки внешнего вида и покраски).</li>
+      <li><strong>5. Покраска.</strong> Выделите деталь (или несколько с зажатым <kbd>Ctrl</kbd>) и выберите цвет справа. Галочка «Заменить весь цвет» покрасит всё изделие сразу.</li>
+      <li><strong>6. Сохранение.</strong> Нажмите «Скачать изображение», чтобы сохранить PNG-снимок текущего вида.</li>
     </ul>
     <div class="modal-note">
-      💡 <em>Технические детали (задняя стенка, кромки, фурнитура с пометкой _NON) защищены от изменения цвета. Детали с пометкой _FAN окрашиваются только материалами из вкладки «Покраска».</em>
+      💡 <em>Технические детали (_NON) не окрашиваются. Детали _FAN окрашиваются только из вкладки «Покраска».</em>
     </div>
     <button class="modal-ok-btn" id="modal-ok">Всё понятно!</button>
-  </div>
-</div>
-
-<div id="ruler-settings-modal" class="modal-backdrop">
-  <div class="modal-content">
-    <button class="modal-close" id="close-ruler-settings">&times;</button>
-    <h2>⚙️ Настройки</h2>
-    <div class="settings-group">
-      <label>Размер текста: <span class="settings-value" id="font-size-value">120</span>px</label>
-      <input type="range" id="font-size-slider" min="75" max="300" value="120">
-    </div>
-    <div class="settings-group">
-      <label>Расстояние между изделиями: <span class="settings-value" id="spacing-value">0</span></label>
-      <input type="range" id="spacing-slider" min="0" max="200" value="0">
-    </div>
-    <button class="modal-ok-btn" id="apply-ruler-settings">Применить</button>
   </div>
 </div>
 
@@ -292,9 +211,6 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 
 const MODELS_URL = 'models/models.json';
 const RAW_BASE = 'models/';
-
-const MAX_REGULAR = 5;
-const MAX_TOP = 5;
 
 const standardTextures = [
   {name:'Белый', image:'textures/belyy_6459_ultradecor.jpg'},
@@ -361,95 +277,93 @@ let scene, camera, renderer, controls;
 let allMeshes = [], originalMaterials = new Map();
 let modelsData = [];
 let selectedObjects = []; 
-
 let sceneModels = []; 
 let nextModelId = 1;
 
-let rulerMode = false;
-let rulerState = 'waiting_first';
-let rulerFirstPoint = null;
-let rulerSecondPoint = null;
-let rulerOffsetDistance = 0;
-let rulerGroup = null;
-let snapMarker = null;
-let allRulerGroups = [];
-const SNAP_DISTANCE = 15;
-let fixedPerpDir = null;
+let isTopView = true;
+let isAntresoleMode = false;
 
-let rulerSettings = {
-  fontSize: 120,
-  labelWidth: 960,
-  labelHeight: 240,
-  spacing: 0
-};
-
-// === УПРАВЛЕНИЕ РЕЖИМАМИ ===
-let currentMode = 'basic';
-
-function setMode(mode) {
-  currentMode = mode;
-  document.body.className = mode === 'basic' ? 'mode-basic' : 'mode-advanced';
-  document.getElementById('link-basic').classList.toggle('active', mode === 'basic');
-  document.getElementById('link-advanced').classList.toggle('active', mode === 'advanced');
-  
-  // Очищаем сцену при переключении режимов
-  if (sceneModels.length > 0) {
-    sceneModels.forEach(model => {
-      scene.remove(model.group);
-      model.group.traverse(c => { if(c.geometry) c.geometry.dispose(); });
-      model.meshes.forEach(m => originalMaterials.delete(m.uuid));
-    });
-    sceneModels = [];
-    allMeshes = [];
-    selectedObjects = [];
-    updateSceneListUI();
-    
-    camera.position.set(0, 0, 10);
-    camera.lookAt(0, 0, 0);
-    controls.target.set(0, 0, 0);
-    controls.update();
-  }
-}
-
-document.getElementById('link-basic').addEventListener('click', (e) => {
-  e.preventDefault();
-  setMode('basic');
-});
-
-document.getElementById('link-advanced').addEventListener('click', (e) => {
-  e.preventDefault();
-  setMode('advanced');
-});
+// Для Drag & Drop
+let dragData = null;
 
 function initScene(){
   const viewport = document.getElementById('viewport');
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xffffff);
+  scene.background = new THREE.Color(0xf0f0f0);
 
-  camera = new THREE.PerspectiveCamera(45, viewport.clientWidth / viewport.clientHeight, 0.01, 100000);
+  // Угловая комната
+  const roomSize = 10000;
+  const wallHeight = 3000;
+  
+  // Пол
+  const floorGeo = new THREE.PlaneGeometry(roomSize, roomSize);
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.8 });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  floor.name = "floor";
+  scene.add(floor);
+
+  // Сетка на полу для ориентира
+  const grid = new THREE.GridHelper(roomSize, 100, 0xcccccc, 0xe5e5e5);
+  grid.position.y = 1;
+  scene.add(grid);
+
+  // Левая стена (вдоль оси Z)
+  const wallLeftGeo = new THREE.PlaneGeometry(roomSize, wallHeight);
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+  const wallLeft = new THREE.Mesh(wallLeftGeo, wallMat);
+  wallLeft.position.set(0, wallHeight / 2, roomSize / 2);
+  wallLeft.rotation.y = Math.PI / 2;
+  wallLeft.name = "wall";
+  scene.add(wallLeft);
+
+  // Правая стена (вдоль оси X)
+  const wallRight = new THREE.Mesh(wallLeftGeo, wallMat);
+  wallRight.position.set(roomSize / 2, wallHeight / 2, 0);
+  wallRight.name = "wall";
+  scene.add(wallRight);
+
+  camera = new THREE.PerspectiveCamera(45, viewport.clientWidth / viewport.clientHeight, 1, 50000);
   renderer = new THREE.WebGLRenderer({antialias:true, logarithmicDepthBuffer:true, preserveDrawingBuffer:true});
   renderer.setSize(viewport.clientWidth, viewport.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
   viewport.appendChild(renderer.domElement);
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
+  controls.maxPolarAngle = Math.PI / 2 - 0.05; // Не даем камере уйти под пол
 
-  scene.add(new THREE.AmbientLight(0xffffff, 1.1));
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-  dirLight.position.set(10, 20, 10);
+  // Освещение
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(5000, 8000, 5000);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.width = 2048;
+  dirLight.shadow.mapSize.height = 2048;
   scene.add(dirLight);
 
-  scene.add(camera);
-  const cameraLight = new THREE.DirectionalLight(0xffffff, 1.2);
-  cameraLight.position.set(0, 0, 10);
-  camera.add(cameraLight);
-
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xffffff, 0.7));
-  const grid = new THREE.GridHelper(100, 100, 0xdddddd, 0xeeeeee);
-  scene.add(grid);
-
+  updateCameraView();
   animate();
+}
+
+function updateCameraView() {
+  if (isTopView) {
+    // Вид сверху (ортогональный или высокий перспективный)
+    camera.position.set(0, 8000, 0);
+    camera.lookAt(0, 0, 0);
+    controls.target.set(0, 0, 0);
+    controls.enableRotate = false; // Блокируем вращение в виде сверху для удобства расстановки
+    controls.update();
+  } else {
+    // Аксонометрия
+    camera.position.set(4000, 4000, 4000);
+    camera.lookAt(0, 1000, 0);
+    controls.target.set(0, 1000, 0);
+    controls.enableRotate = true;
+    controls.update();
+  }
 }
 
 initScene();
@@ -464,7 +378,7 @@ async function loadModelsList(){
   }catch(error){
     console.error('Ошибка загрузки models.json:', error);
     document.getElementById('model-list').innerHTML =
-      `<div style="color:#c00;padding:20px;font-size:13px">Ошибка загрузки списка моделей:<br><br><code>${error.message}</code></div>`;
+      `<div style="color:#c00;padding:20px;font-size:13px">Ошибка загрузки:<br><code>${error.message}</code></div>`;
   }
 }
 
@@ -478,44 +392,14 @@ function renderModelsList(models){
   models.forEach(model => {
     const div = document.createElement('div');
     div.className = 'model-item';
-    div.innerHTML = `
-      <h3>${model.name}</h3>
-      <div class="model-buttons">
-        <button class="add-model-btn" title="Добавить изделие">➕</button>
-        <button class="add-top-btn" title="Добавить антресоль">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 3L13 9H3L8 3Z" fill="white"/>
-          </svg>
-        </button>
-      </div>
-    `;
+    div.draggable = true; // Включаем Drag & Drop
+    div.innerHTML = `<h3>${model.name}</h3>`;
     
-    const addBtn = div.querySelector('.add-model-btn');
-    addBtn.onclick = (e) => { 
-      e.stopPropagation(); 
-      addModelToScene(model, div, false); 
-    };
-    
-    const addTopBtn = div.querySelector('.add-top-btn');
-    addTopBtn.onclick = (e) => { 
-      e.stopPropagation(); 
-      addModelToScene(model, div, true); 
-    };
-    
-    // Клик по карточке
-    div.onclick = (e) => { 
-      if (e.target.closest('.add-model-btn') || e.target.closest('.add-top-btn')) return;
-      
-      if (currentMode === 'basic') {
-        // В обычном режиме клик по карточке = добавление/замена изделия
-        if (sceneModels.length > 0) {
-          const currentId = sceneModels[0].id;
-          removeModelFromScene(currentId);
-        }
-        addModelToScene(model, div, false);
-      }
-      // В расширенном режиме клик по карточке ничего не делает
-    };
+    div.addEventListener('dragstart', (e) => {
+      dragData = model;
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('text/plain', JSON.stringify(model));
+    });
     
     listEl.appendChild(div);
   });
@@ -528,420 +412,267 @@ document.getElementById('search-input').addEventListener('input', (e) => {
   ));
 });
 
-function recalculateRegularModelsPositions() {
-  const regularModels = sceneModels.filter(m => !m.isTop);
-  
-  regularModels.forEach((model, index) => {
-    if (index === 0) {
-      model.group.position.x = 0;
-    } else {
-      const prevModel = regularModels[index - 1];
-      const prevBox = new THREE.Box3().setFromObject(prevModel.group);
-      model.group.position.x = prevBox.max.x + rulerSettings.spacing - model.cleanMinX;
+// === DRAG & DROP НА СЦЕНУ ===
+const viewport = document.getElementById('viewport');
+
+viewport.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+});
+
+viewport.addEventListener('drop', (e) => {
+  e.preventDefault();
+  if (!dragData) return;
+
+  const rect = viewport.getBoundingClientRect();
+  const mouse = new THREE.Vector2(
+    ((e.clientX - rect.left) / rect.width) * 2 - 1,
+    -((e.clientY - rect.top) / rect.height) * 2 + 1
+  );
+
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+
+  // Ищем пересечение с полом или верхом других шкафов
+  const intersects = raycaster.intersectObjects(scene.children, true);
+  let dropPoint = new THREE.Vector3(0, 0, 0);
+  let foundSurface = false;
+
+  for (let hit of intersects) {
+    if (hit.object.name === 'floor' || hit.object.name === 'wall') continue; // Игнорируем стены для простоты, или можно доработать
+    
+    // Если это верхняя грань существующего шкафа
+    const box = new THREE.Box3().setFromObject(hit.object);
+    if (hit.point.y > box.min.y + (box.max.y - box.min.y) * 0.8) {
+      dropPoint.copy(hit.point);
+      foundSurface = true;
+      break;
     }
-    
-    const topModels = sceneModels.filter(m => m.isTop && m.parentModel === model);
-    topModels.forEach(topModel => {
-      if (topModel.relativeOffset) {
-        topModel.group.position.x = model.group.position.x + topModel.relativeOffset.x;
-        topModel.group.position.y = topModel.relativeOffset.y;
-        topModel.group.position.z = topModel.relativeOffset.z;
-      }
-    });
-    
-    model.group.updateMatrixWorld(true);
-  });
+  }
+
+  if (!foundSurface) {
+    // Если не попали в шкаф, ставим на пол
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const target = new THREE.Vector3();
+    raycaster.ray.intersectPlane(plane, target);
+    if (target) dropPoint.copy(target);
+  }
+
+  placeModel(dragData, dropPoint, isAntresoleMode);
+  dragData = null;
+});
+
+function placeModel(modelData, position, forceAntresole) {
+  showLoading(`Размещение: ${modelData.name}`);
+  const modelUrl = /^https?:\/\//i.test(modelData.file) ? modelData.file : RAW_BASE + modelData.file;
+  const loader = new GLTFLoader();
   
-  fitCameraToScene();
+  loader.load(
+    modelUrl,
+    (gltf) => {
+      const group = gltf.scene;
+      
+      // Определяем, является ли модель антресолью (по имени или флагу)
+      const isAntresole = forceAntresole || modelData.name.toLowerCase().includes('антресоль');
+      
+      group.position.copy(position);
+      
+      // Если это антресоль, пытаемся примагнитить к ближайшему шкафу
+      if (isAntresole) {
+        snapToCabinet(group);
+      } else {
+        // Для обычных шкафов выравниваем по полу (Y = половина высоты, если центр в середине, или корректируем)
+        const box = new THREE.Box3().setFromObject(group);
+        group.position.y = position.y - box.min.y; 
+      }
+
+      group.updateMatrixWorld(true);
+      scene.add(group);
+      
+      const modelEntry = {
+        id: nextModelId++,
+        name: modelData.name,
+        group: group,
+        meshes: [],
+        isTop: isAntresole
+      };
+      
+      group.traverse((child) => {
+        if(child.isMesh){
+          child.castShadow = true;
+          child.receiveShadow = true;
+          allMeshes.push(child);
+          modelEntry.meshes.push(child);
+          
+          if(Array.isArray(child.material)){
+            child.material = child.material.map(m => m.clone());
+            originalMaterials.set(child.uuid, child.material.map(m => m.clone()));
+          }else{
+            child.material = child.material.clone();
+            originalMaterials.set(child.uuid, child.material.clone());
+          }
+          
+          const mats = Array.isArray(child.material) ? child.material : [child.material];
+          mats.forEach(mat => {
+            mat.side = THREE.DoubleSide;
+            mat.polygonOffset = true;
+            mat.polygonOffsetFactor = 1.0;
+          });
+        }
+      });
+      
+      sceneModels.push(modelEntry);
+      hideLoading();
+      
+      // Автоматически переключаем на аксонометрию при первом добавлении, если мы в виде сверху
+      if (isTopView && sceneModels.length === 1) {
+        toggleView();
+      }
+    },
+    undefined,
+    (error) => {
+      hideLoading();
+      console.error('Ошибка:', error);
+      alert('Не удалось загрузить модель');
+    }
+  );
 }
 
-function processAndAddModel(gltf, modelName, addOnTop){
-  const group = gltf.scene;
-  
-  group.position.set(0, 0, 0);
-  scene.add(group);
-  group.updateMatrixWorld(true);
-  
-  const cleanBox = new THREE.Box3().setFromObject(group);
-  const cleanMinX = cleanBox.min.x;
-  const cleanMaxX = cleanBox.max.x;
-  const cleanWidth = cleanMaxX - cleanMinX;
-  
-  let offsetX = 0, offsetY = 0, offsetZ = 0;
+function snapToCabinet(antresoleGroup) {
+  const antBox = new THREE.Box3().setFromObject(antresoleGroup);
+  let bestMatch = null;
+  let minDist = Infinity;
 
-  if (addOnTop) {
-    const topModels = sceneModels.filter(m => m.isTop);
-    if (topModels.length >= MAX_TOP) {
-      scene.remove(group);
-      alert(`Можно добавить максимум ${MAX_TOP} антресолей.`);
-      return;
-    }
-    
-    const regularModels = sceneModels.filter(m => !m.isTop);
-    if (regularModels.length === 0) {
-      scene.remove(group);
-      alert('Сначала добавьте хотя бы одно обычное изделие.');
-      return;
-    }
-    
-    let targetModel = null;
-    for (let i = regularModels.length - 1; i >= 0; i--) {
-      const hasTop = sceneModels.some(m => m.isTop && m.parentModel === regularModels[i]);
-      if (!hasTop) {
-        targetModel = regularModels[i];
-        break;
+  sceneModels.forEach(m => {
+    if (!m.isTop) {
+      const mBox = new THREE.Box3().setFromObject(m.group);
+      // Проверяем, находится ли антресоль примерно над этим шкафом по X и Z
+      const dx = Math.abs(antBox.min.x - mBox.min.x);
+      const dz = Math.abs(antBox.min.z - mBox.min.z);
+      
+      if (dx < 500 && dz < 500) { // Допуск 500мм
+        const dist = Math.sqrt(dx*dx + dz*dz);
+        if (dist < minDist) {
+          minDist = dist;
+          bestMatch = m;
+        }
       }
     }
-    
-    if (!targetModel) {
-      scene.remove(group);
-      alert('Все обычные изделия уже имеют антресоли.');
-      return;
-    }
-    
-    const targetBox = new THREE.Box3().setFromObject(targetModel.group);
-    const newBox = new THREE.Box3().setFromObject(group);
-    const targetCenter = targetBox.getCenter(new THREE.Vector3());
-    const newCenter = newBox.getCenter(new THREE.Vector3());
+  });
 
-    offsetX = targetCenter.x - newCenter.x;
-    offsetY = targetBox.max.y - newBox.min.y;
-    offsetZ = targetCenter.z - newCenter.z;
+  if (bestMatch) {
+    const targetBox = new THREE.Box3().setFromObject(bestMatch.group);
+    const antLocalBox = new THREE.Box3().setFromObject(antresoleGroup);
     
-    group.position.set(offsetX, offsetY, offsetZ);
-    group.updateMatrixWorld(true);
+    // Примагничиваем X и Z к центру шкафа
+    antresoleGroup.position.x = bestMatch.group.position.x;
+    antresoleGroup.position.z = bestMatch.group.position.z;
     
-    const modelEntry = {
-      id: nextModelId++,
-      name: modelName,
-      group: group,
-      meshes: [],
-      isTop: true,
-      parentModel: targetModel,
-      relativeOffset: { 
-        x: group.position.x - targetModel.group.position.x,
-        y: group.position.y - targetModel.group.position.y,
-        z: group.position.z - targetModel.group.position.z
-      },
-      cleanMinX: cleanMinX,
-      cleanMaxX: cleanMaxX,
-      cleanWidth: cleanWidth
-    };
-    
-    group.traverse((child) => {
-      if(child.isMesh){
-        allMeshes.push(child);
-        modelEntry.meshes.push(child);
-        
-        if(Array.isArray(child.material)){
-          child.material = child.material.map(m => m.clone());
-          originalMaterials.set(child.uuid, child.material.map(m => m.clone()));
-        }else{
-          child.material = child.material.clone();
-          originalMaterials.set(child.uuid, child.material.clone());
-        }
-        
-        const mats = Array.isArray(child.material) ? child.material : [child.material];
-        mats.forEach(mat => {
-          mat.side = THREE.DoubleSide;
-          mat.transparent = false;
-          mat.polygonOffset = true;
-          mat.polygonOffsetFactor = 1.0;
-        });
-      }
-    });
-    
-    sceneModels.push(modelEntry);
-    updateSceneListUI();
-    fitCameraToScene();
-    
-  } else {
-    const regularModels = sceneModels.filter(m => !m.isTop);
-    if (regularModels.length >= MAX_REGULAR) {
-      scene.remove(group);
-      alert(`Можно добавить максимум ${MAX_REGULAR} обычных изделий.`);
-      return;
-    }
-    
-    if (regularModels.length > 0) {
-      const lastModel = regularModels[regularModels.length - 1];
-      const lastBox = new THREE.Box3().setFromObject(lastModel.group);
-      offsetX = lastBox.max.x + rulerSettings.spacing - cleanMinX;
-    } else {
-      offsetX = 0;
-      offsetY = 0;
-      offsetZ = 0;
-    }
-    
-    group.position.set(offsetX, offsetY, offsetZ);
-    group.updateMatrixWorld(true);
-    
-    const modelEntry = {
-      id: nextModelId++,
-      name: modelName,
-      group: group,
-      meshes: [],
-      isTop: false,
-      parentModel: null,
-      relativeOffset: null,
-      cleanMinX: cleanMinX,
-      cleanMaxX: cleanMaxX,
-      cleanWidth: cleanWidth
-    };
-    
-    group.traverse((child) => {
-      if(child.isMesh){
-        allMeshes.push(child);
-        modelEntry.meshes.push(child);
-        
-        if(Array.isArray(child.material)){
-          child.material = child.material.map(m => m.clone());
-          originalMaterials.set(child.uuid, child.material.map(m => m.clone()));
-        }else{
-          child.material = child.material.clone();
-          originalMaterials.set(child.uuid, child.material.clone());
-        }
-        
-        const mats = Array.isArray(child.material) ? child.material : [child.material];
-        mats.forEach(mat => {
-          mat.side = THREE.DoubleSide;
-          mat.transparent = false;
-          mat.polygonOffset = true;
-          mat.polygonOffsetFactor = 1.0;
-        });
-      }
-    });
-    
-    sceneModels.push(modelEntry);
-    updateSceneListUI();
-    fitCameraToScene();
+    // Примагничиваем Y к верху шкафа
+    antresoleGroup.position.y = targetBox.max.y - antLocalBox.min.y;
+    antresoleGroup.updateMatrixWorld(true);
   }
 }
 
-async function loadModel(model, element){
-  document.querySelectorAll('.model-item').forEach(el => el.classList.remove('active'));
-  if(element) element.classList.add('active');
-  showLoading(`Загрузка: ${model.name}`);
+// === ПОВОРОТ ПРАВОЙ КНОПКОЙ МЫШИ ===
+viewport.addEventListener('contextmenu', (e) => {
+  e.preventDefault(); // Отключаем стандартное меню браузера
+  
+  if (selectedObjects.length === 1) {
+    // Находим родительскую группу выбранного меша
+    const selectedMesh = selectedObjects[0];
+    const modelEntry = sceneModels.find(m => m.meshes.includes(selectedMesh));
+    
+    if (modelEntry) {
+      // Поворачиваем всю группу на 90 градусов (PI/2)
+      modelEntry.group.rotation.y += Math.PI / 2;
+      modelEntry.group.updateMatrixWorld(true);
+      
+      // Если это антресоль, после поворота нужно перепроверить привязку
+      if (modelEntry.isTop) {
+        snapToCabinet(modelEntry.group);
+      }
+    }
+  }
+});
 
-  sceneModels.forEach(sm => {
-    scene.remove(sm.group);
-    sm.group.traverse(c => { if(c.geometry) c.geometry.dispose(); });
-    sm.meshes.forEach(m => originalMaterials.delete(m.uuid));
+// Также добавляем поворот по клавише R для удобства
+window.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() === 'r' && selectedObjects.length === 1) {
+    viewport.dispatchEvent(new Event('contextmenu'));
+  }
+});
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+viewport.addEventListener('click', (event) => {
+  if (event.target !== renderer.domElement) return;
+
+  const rect = viewport.getBoundingClientRect();
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(allMeshes, true);
+
+  // Снимаем старую подсветку (красный цвет)
+  allMeshes.forEach(m => {
+    const mats = Array.isArray(m.material) ? m.material : [m.material];
+    mats.forEach(mt => { if(mt.emissive) mt.emissive.setHex(0x000000); });
+  });
+  selectedObjects = [];
+
+  if(intersects.length > 0){
+    const clickedObject = intersects[0].object;
+    
+    if (event.ctrlKey || event.metaKey) {
+      const index = selectedObjects.indexOf(clickedObject);
+      if (index > -1) selectedObjects.splice(index, 1);
+      else selectedObjects.push(clickedObject);
+    } else {
+      selectedObjects = [clickedObject];
+    }
+
+    // Подсвечиваем красным (0xff0000)
+    selectedObjects.forEach(obj => {
+      const selMats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      selMats.forEach(m => { if(m.emissive) m.emissive.setHex(0xff0000); });
+    });
+  }
+});
+
+function toggleView() {
+  isTopView = !isTopView;
+  updateCameraView();
+  const btn = document.getElementById('view-toggle-btn');
+  btn.textContent = isTopView ? '🔄 Вид сверху / Аксонометрия' : '🔄 Аксонометрия / Вид сверху';
+  btn.classList.toggle('active', !isTopView);
+}
+
+document.getElementById('view-toggle-btn').addEventListener('click', toggleView);
+
+document.getElementById('clear-scene-btn').addEventListener('click', () => {
+  if (sceneModels.length === 0) return;
+  if (!confirm('Удалить все модели из сцены?')) return;
+  
+  sceneModels.forEach(model => {
+    scene.remove(model.group);
+    model.group.traverse(c => { if(c.geometry) c.geometry.dispose(); });
+    model.meshes.forEach(m => originalMaterials.delete(m.uuid));
   });
   sceneModels = [];
   allMeshes = [];
-  originalMaterials.clear();
   selectedObjects = [];
-
-  const modelUrl = /^https?:\/\//i.test(model.file) ? model.file : RAW_BASE + model.file;
-  const loader = new GLTFLoader();
   
-  loader.load(
-    modelUrl,
-    (gltf) => { processAndAddModel(gltf, model.name, false); hideLoading(); },
-    (xhr) => { if(xhr.total) showLoading(`Загрузка: ${(xhr.loaded/xhr.total*100).toFixed(0)}%`); },
-    (error) => {
-      hideLoading();
-      console.error('Ошибка загрузки модели:', error);
-      alert(`Не удалось загрузить модель:\n${modelUrl}\n\n${error.message || ''}`);
-    }
-  );
-}
-
-async function addModelToScene(model, element, addOnTop){
-  showLoading(`Добавление: ${model.name}`);
-  const modelUrl = /^https?:\/\//i.test(model.file) ? model.file : RAW_BASE + model.file;
-  const loader = new GLTFLoader();
-  
-  loader.load(
-    modelUrl,
-    (gltf) => { processAndAddModel(gltf, model.name, addOnTop); hideLoading(); },
-    (xhr) => { if(xhr.total) showLoading(`Добавление: ${(xhr.loaded/xhr.total*100).toFixed(0)}%`); },
-    (error) => {
-      hideLoading();
-      console.error('Ошибка добавления модели:', error);
-      alert(`Не удалось добавить модель:\n${modelUrl}\n\n${error.message || ''}`);
-    }
-  );
-}
-
-function removeModelFromScene(id){
-  const index = sceneModels.findIndex(m => m.id === id);
-  if (index === -1) return;
-  
-  const model = sceneModels[index];
-  
-  if (!model.isTop) {
-    const topModel = sceneModels.find(m => m.isTop && m.parentModel === model);
-    if (topModel) {
-      scene.remove(topModel.group);
-      topModel.group.traverse(c => { if(c.geometry) c.geometry.dispose(); });
-      allMeshes = allMeshes.filter(m => !topModel.meshes.includes(m));
-      topModel.meshes.forEach(m => originalMaterials.delete(m.uuid));
-      const topIndex = sceneModels.findIndex(m => m.id === topModel.id);
-      if (topIndex !== -1) sceneModels.splice(topIndex, 1);
-    }
-  }
-  
-  scene.remove(model.group);
-  model.group.traverse(c => { if(c.geometry) c.geometry.dispose(); });
-  
-  allMeshes = allMeshes.filter(m => !model.meshes.includes(m));
-  selectedObjects = selectedObjects.filter(m => !model.meshes.includes(m));
-  model.meshes.forEach(m => originalMaterials.delete(m.uuid));
-  
-  sceneModels.splice(index, 1);
-  updateSceneListUI();
-  
-  if (sceneModels.length > 0) {
-    fitCameraToScene();
-  } else {
-    camera.position.set(0, 0, 10);
-    camera.lookAt(0, 0, 0);
-    controls.target.set(0, 0, 0);
-    controls.update();
-  }
-}
-
-function fitCameraToScene(){
-  if (sceneModels.length === 0) return;
-  
-  const box = new THREE.Box3();
-  sceneModels.forEach(sm => box.union(new THREE.Box3().setFromObject(sm.group)));
-  
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z);
-  
-  const fov = camera.fov * (Math.PI / 180);
-  const cameraZ = (maxDim / 2) / Math.tan(fov / 2) * 1.8;
-  
-  camera.position.set(center.x, center.y + size.y * 0.2, center.z - cameraZ);
-  camera.lookAt(center);
-  controls.target.copy(center);
+  camera.position.set(0, 8000, 0);
+  camera.lookAt(0, 0, 0);
+  controls.target.set(0, 0, 0);
   controls.update();
-}
-
-let dragSourceId = null;
-
-function updateSceneListUI(){
-  const container = document.getElementById('scene-list');
-  const countEl = document.getElementById('scene-count');
-  container.innerHTML = '';
-  countEl.textContent = sceneModels.length;
-  
-  if (sceneModels.length === 0) {
-    container.innerHTML = '<div style="color:#999;font-size:11px;text-align:center;padding:8px;">Сцена пуста</div>';
-    return;
-  }
-  
-  sceneModels.forEach(model => {
-    const item = document.createElement('div');
-    item.className = 'scene-item' + (model.isTop ? ' top-item' : '');
-    item.dataset.modelId = model.id;
-    
-    if (!model.isTop) {
-      item.draggable = true;
-    }
-    
-    const nameSpan = document.createElement('span');
-    nameSpan.style.flex = '1';
-    nameSpan.style.overflow = 'hidden';
-    nameSpan.style.textOverflow = 'ellipsis';
-    nameSpan.style.whiteSpace = 'nowrap';
-    nameSpan.title = model.name;
-    nameSpan.textContent = model.name + (model.isTop ? ' (антресоль)' : '');
-    
-    const removeBtn = document.createElement('button');
-    removeBtn.textContent = '✕';
-    removeBtn.title = 'Удалить из сцены';
-    removeBtn.onmouseover = () => removeBtn.style.background = '#cc0000';
-    removeBtn.onmouseout = () => removeBtn.style.background = '#ff4444';
-    removeBtn.onclick = (e) => { 
-      e.stopPropagation(); 
-      removeModelFromScene(model.id); 
-    };
-    
-    item.appendChild(nameSpan);
-    item.appendChild(removeBtn);
-    
-    if (!model.isTop) {
-      item.addEventListener('dragstart', (e) => {
-        dragSourceId = model.id;
-        item.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', model.id);
-      });
-      
-      item.addEventListener('dragend', (e) => {
-        item.classList.remove('dragging');
-        document.querySelectorAll('.scene-item').forEach(el => el.classList.remove('drag-over'));
-        dragSourceId = null;
-      });
-      
-      item.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        document.querySelectorAll('.scene-item').forEach(el => el.classList.remove('drag-over'));
-        if (item.dataset.modelId !== dragSourceId) {
-          item.classList.add('drag-over');
-        }
-      });
-      
-      item.addEventListener('dragleave', (e) => {
-        item.classList.remove('drag-over');
-      });
-      
-      item.addEventListener('drop', (e) => {
-        e.preventDefault();
-        item.classList.remove('drag-over');
-        
-        const sourceId = parseInt(e.dataTransfer.getData('text/plain'));
-        const targetId = model.id;
-        
-        if (sourceId === targetId) return;
-        
-        const sourceIndex = sceneModels.findIndex(m => m.id === sourceId);
-        const targetIndex = sceneModels.findIndex(m => m.id === targetId);
-        
-        if (sourceIndex === -1 || targetIndex === -1) return;
-        
-        const sourceModel = sceneModels[sourceIndex];
-        
-        const itemsToMove = [sourceModel];
-        const topModel = sceneModels.find(m => m.isTop && m.parentModel === sourceModel);
-        if (topModel) itemsToMove.push(topModel);
-        
-        itemsToMove.forEach(item => {
-          const idx = sceneModels.findIndex(m => m.id === item.id);
-          if (idx !== -1) sceneModels.splice(idx, 1);
-        });
-        
-        let insertIndex = sceneModels.findIndex(m => m.id === targetId);
-        const targetTopModel = sceneModels.find(m => m.isTop && m.parentModel === model);
-        if (targetTopModel) {
-          const topIdx = sceneModels.findIndex(m => m.id === targetTopModel.id);
-          insertIndex = topIdx + 1;
-        } else {
-          insertIndex = insertIndex + 1;
-        }
-        
-        itemsToMove.forEach((item, idx) => {
-          sceneModels.splice(insertIndex + idx, 0, item);
-        });
-        
-        recalculateRegularModelsPositions();
-        updateSceneListUI();
-      });
-    }
-    
-    container.appendChild(item);
-  });
-}
+});
 
 const textureLoader = new THREE.TextureLoader();
 
-// === ИЗМЕНЕННАЯ ФУНКЦИЯ ОКРАШИВАНИЯ ===
 function applyMaterial(value, category) {
   const applyToAllCheckbox = document.getElementById('apply-to-all');
   const applyToAll = applyToAllCheckbox.checked;
@@ -968,16 +699,10 @@ function applyMaterial(value, category) {
       const isNon = objName.endsWith('_NON');
       const isFan = objName.endsWith('_FAN');
 
-      // 1. Детали _NON не окрашиваются вообще
       if (isNon) return;
-
-      // 2. Детали _FAN окрашиваются ТОЛЬКО материалами из вкладки "Покраска"
       if (isFan && category !== 'paint') return;
-
-      // 3. Материалы из вкладки "Покраска" применяются ТОЛЬКО к деталям _FAN
       if (!isFan && category === 'paint') return;
 
-      // Если все проверки пройдены, применяем материал
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       mats.forEach(m => {
         m.map = tex;
@@ -987,7 +712,6 @@ function applyMaterial(value, category) {
     });
   }, undefined, (err) => {
     console.error('Не удалось загрузить текстуру:', value, err);
-    alert(`Не удалось загрузить текстуру:\n${value}`);
   });
 }
 
@@ -1016,404 +740,25 @@ function resetModel(){
   document.getElementById('apply-to-all').checked = false;
 }
 
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
+document.getElementById('reset-btn').addEventListener('click', resetModel);
 
-function createTextSprite(text, position) {
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  canvas.width = rulerSettings.labelWidth;
-  canvas.height = rulerSettings.labelHeight;
-  
-  context.fillStyle = 'rgba(0, 68, 204, 0.95)';
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  
-  context.fillStyle = 'white';
-  context.font = `bold ${rulerSettings.fontSize}px Arial`;
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(text, canvas.width / 2, canvas.height / 2);
-  
-  const texture = new THREE.CanvasTexture(canvas);
-  const material = new THREE.SpriteMaterial({ map: texture, depthTest: false });
-  const sprite = new THREE.Sprite(material);
-  sprite.position.copy(position);
-  sprite.scale.set(rulerSettings.labelWidth * 0.25, rulerSettings.labelHeight * 0.25, 1);
-  sprite.renderOrder = 999;
-  
-  return sprite;
-}
-
-function createMarker(point, color, size = 3) {
-  const geometry = new THREE.SphereGeometry(size, 16, 16);
-  const material = new THREE.MeshBasicMaterial({ color: color, depthTest: false });
-  const marker = new THREE.Mesh(geometry, material);
-  marker.position.copy(point);
-  marker.renderOrder = 999;
-  return marker;
-}
-
-function snapToVertex(point) {
-  let closestVertex = null;
-  let minDistance = SNAP_DISTANCE;
-  
-  allMeshes.forEach(mesh => {
-    const geometry = mesh.geometry;
-    const position = geometry.attributes.position;
-    const worldMatrix = mesh.matrixWorld;
-    
-    for (let i = 0; i < position.count; i++) {
-      const vertex = new THREE.Vector3().fromBufferAttribute(position, i);
-      vertex.applyMatrix4(worldMatrix);
-      
-      const distance = vertex.distanceTo(point);
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestVertex = vertex.clone();
-      }
-    }
-  });
-  
-  return closestVertex;
-}
-
-function createRulerWithExtension(startPoint, endPoint, offsetDistance) {
-  const group = new THREE.Group();
-  
-  const dir = new THREE.Vector3().subVectors(endPoint, startPoint).normalize();
-  const midPoint = new THREE.Vector3().addVectors(startPoint, endPoint).multiplyScalar(0.5);
-  const cameraDir = new THREE.Vector3().subVectors(camera.position, midPoint).normalize();
-  const perpDir = new THREE.Vector3().crossVectors(dir, cameraDir).normalize();
-  
-  const offsetVector = perpDir.multiplyScalar(offsetDistance);
-  
-  const startOffset = new THREE.Vector3().addVectors(startPoint, offsetVector);
-  const endOffset = new THREE.Vector3().addVectors(endPoint, offsetVector);
-  
-  const lineGeometry = new THREE.BufferGeometry().setFromPoints([startOffset, endOffset]);
-  const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0044cc, linewidth: 2, depthTest: false });
-  const mainLine = new THREE.Line(lineGeometry, lineMaterial);
-  mainLine.renderOrder = 999;
-  group.add(mainLine);
-  
-  const extLine1Geometry = new THREE.BufferGeometry().setFromPoints([startPoint, startOffset]);
-  const extLine1 = new THREE.Line(extLine1Geometry, lineMaterial.clone());
-  extLine1.renderOrder = 999;
-  group.add(extLine1);
-  
-  const extLine2Geometry = new THREE.BufferGeometry().setFromPoints([endPoint, endOffset]);
-  const extLine2 = new THREE.Line(extLine2Geometry, lineMaterial.clone());
-  extLine2.renderOrder = 999;
-  group.add(extLine2);
-  
-  const marker1 = createMarker(startOffset, 0x0044cc, 4);
-  const marker2 = createMarker(endOffset, 0x0044cc, 4);
-  group.add(marker1);
-  group.add(marker2);
-  
-  const pointMarker1 = createMarker(startPoint, 0xff0000, 5);
-  const pointMarker2 = createMarker(endPoint, 0xff0000, 5);
-  group.add(pointMarker1);
-  group.add(pointMarker2);
-  
-  const distance = startPoint.distanceTo(endPoint);
-  const distanceMM = Math.round(distance);
-  const labelMidPoint = new THREE.Vector3().addVectors(startOffset, endOffset).multiplyScalar(0.5);
-  const label = createTextSprite(`${distanceMM} мм`, labelMidPoint);
-  group.add(label);
-  
-  return group;
-}
-
-function updateAllRulers() {
-  allRulerGroups.forEach(rulerData => {
-    scene.remove(rulerData.group);
-    rulerData.group = createRulerWithExtension(
-      rulerData.startPoint,
-      rulerData.endPoint,
-      rulerData.offsetDistance
-    );
-    scene.add(rulerData.group);
-  });
-}
-
-function clearRuler() {
-  if (rulerGroup) {
-    scene.remove(rulerGroup);
-    rulerGroup = null;
-  }
-  if (snapMarker) {
-    scene.remove(snapMarker);
-    snapMarker = null;
-  }
-  rulerState = 'waiting_first';
-  rulerFirstPoint = null;
-  rulerSecondPoint = null;
-  rulerOffsetDistance = 0;
-  fixedPerpDir = null;
-}
-
-function clearAllRulers() {
-  allRulerGroups.forEach(rulerData => {
-    scene.remove(rulerData.group);
-  });
-  allRulerGroups = [];
-  clearRuler();
-}
-
-renderer.domElement.addEventListener('click', (event) => {
-  if(sceneModels.length === 0) return;
-
-  const rect = renderer.domElement.getBoundingClientRect();
-  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-  raycaster.setFromCamera(mouse, camera);
-  
-  if (rulerMode) {
-    const intersects = raycaster.intersectObjects(allMeshes, true);
-    
-    if (intersects.length > 0) {
-      const point = intersects[0].point;
-      const snappedPoint = snapToVertex(point);
-      const finalPoint = snappedPoint || point;
-      
-      if (rulerState === 'waiting_first') {
-        rulerFirstPoint = finalPoint.clone();
-        rulerState = 'waiting_second';
-        
-      } else if (rulerState === 'waiting_second') {
-        rulerSecondPoint = finalPoint.clone();
-        rulerState = 'waiting_offset';
-        rulerOffsetDistance = 50;
-        
-        const midPoint = new THREE.Vector3().addVectors(rulerFirstPoint, rulerSecondPoint).multiplyScalar(0.5);
-        const dir = new THREE.Vector3().subVectors(rulerSecondPoint, rulerFirstPoint).normalize();
-        const cameraDir = new THREE.Vector3().subVectors(camera.position, midPoint).normalize();
-        fixedPerpDir = new THREE.Vector3().crossVectors(dir, cameraDir).normalize();
-        
-      } else if (rulerState === 'waiting_offset') {
-        const rulerData = {
-          startPoint: rulerFirstPoint.clone(),
-          endPoint: rulerSecondPoint.clone(),
-          offsetDistance: rulerOffsetDistance,
-          group: rulerGroup
-        };
-        allRulerGroups.push(rulerData);
-        
-        rulerState = 'waiting_first';
-        rulerFirstPoint = null;
-        rulerSecondPoint = null;
-        rulerOffsetDistance = 0;
-        rulerGroup = null;
-        fixedPerpDir = null;
-      }
-    }
-    return;
-  }
-
-  const intersects = raycaster.intersectObjects(allMeshes, true);
-
+document.getElementById('screenshot-btn').addEventListener('click', () => {
+  // Временно снимаем выделение для чистого снимка
   allMeshes.forEach(m => {
     const mats = Array.isArray(m.material) ? m.material : [m.material];
     mats.forEach(mt => { if(mt.emissive) mt.emissive.setHex(0x000000); });
   });
-
-  if(intersects.length > 0){
-    const clickedObject = intersects[0].object;
-    if (event.ctrlKey || event.metaKey) {
-      const index = selectedObjects.indexOf(clickedObject);
-      if (index > -1) selectedObjects.splice(index, 1);
-      else selectedObjects.push(clickedObject);
-    } else {
-      selectedObjects = [clickedObject];
-    }
-
-    selectedObjects.forEach(obj => {
-      const selMats = Array.isArray(obj.material) ? obj.material : [obj.material];
-      selMats.forEach(m => { if(m.emissive) m.emissive.setHex(0x444444); });
-    });
-  } else {
-    selectedObjects = [];
-  }
-});
-
-function projectMouseToPlane(mouseX, mouseY, midPoint, planeNormal) {
-  const raycasterLocal = new THREE.Raycaster();
-  const mouseLocal = new THREE.Vector2(mouseX, mouseY);
-  raycasterLocal.setFromCamera(mouseLocal, camera);
   
-  const plane = new THREE.Plane();
-  plane.setFromNormalAndCoplanarPoint(planeNormal, midPoint);
-  
-  const target = new THREE.Vector3();
-  raycasterLocal.ray.intersectPlane(plane, target);
-  
-  return target;
-}
-
-renderer.domElement.addEventListener('mousemove', (event) => {
-  if (!rulerMode) return;
-  
-  const rect = renderer.domElement.getBoundingClientRect();
-  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-  
-  raycaster.setFromCamera(mouse, camera);
-  const intersects = raycaster.intersectObjects(allMeshes, true);
-  
-  if (intersects.length > 0) {
-    const point = intersects[0].point;
-    const snappedPoint = snapToVertex(point);
-    const finalPoint = snappedPoint || point;
-    
-    if (snapMarker) {
-      scene.remove(snapMarker);
-    }
-    snapMarker = createMarker(finalPoint, snappedPoint ? 0x00ff00 : 0xffff00, 6);
-    scene.add(snapMarker);
-    
-    if (rulerState === 'waiting_second' && rulerFirstPoint) {
-      if (rulerGroup) {
-        scene.remove(rulerGroup);
-      }
-      const tempLine = new THREE.Group();
-      const lineGeometry = new THREE.BufferGeometry().setFromPoints([rulerFirstPoint, finalPoint]);
-      const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0044cc, linewidth: 2, depthTest: false });
-      const line = new THREE.Line(lineGeometry, lineMaterial);
-      line.renderOrder = 999;
-      tempLine.add(line);
-      tempLine.add(createMarker(rulerFirstPoint, 0xff0000, 5));
-      tempLine.add(createMarker(finalPoint, 0xff0000, 5));
-      rulerGroup = tempLine;
-      scene.add(rulerGroup);
-      
-    } else if (rulerState === 'waiting_offset' && rulerFirstPoint && rulerSecondPoint && fixedPerpDir) {
-      const midPoint = new THREE.Vector3().addVectors(rulerFirstPoint, rulerSecondPoint).multiplyScalar(0.5);
-      const dir = new THREE.Vector3().subVectors(rulerSecondPoint, rulerFirstPoint).normalize();
-      
-      const projectedPoint = projectMouseToPlane(mouse.x, mouse.y, midPoint, dir);
-      
-      if (projectedPoint) {
-        const mouseDir = new THREE.Vector3().subVectors(projectedPoint, midPoint);
-        rulerOffsetDistance = mouseDir.dot(fixedPerpDir);
-      }
-      
-      if (rulerGroup) {
-        scene.remove(rulerGroup);
-      }
-      rulerGroup = createRulerWithExtension(rulerFirstPoint, rulerSecondPoint, rulerOffsetDistance);
-      scene.add(rulerGroup);
-    }
-  } else {
-    if (snapMarker) {
-      scene.remove(snapMarker);
-      snapMarker = null;
-    }
-  }
-});
-
-document.getElementById('reset-btn').addEventListener('click', resetModel);
-
-const rulerBtn = document.getElementById('ruler-btn');
-rulerBtn.addEventListener('click', () => {
-  rulerMode = !rulerMode;
-  
-  if (rulerMode) {
-    rulerBtn.textContent = '📏 Линейка (вкл)';
-    rulerBtn.classList.add('active');
-    controls.enabled = false;
-  } else {
-    rulerBtn.textContent = '📏 Линейка (выкл)';
-    rulerBtn.classList.remove('active');
-    controls.enabled = true;
-    clearRuler();
-  }
-});
-
-const rulerSettingsBtn = document.getElementById('ruler-settings-btn');
-const rulerSettingsModal = document.getElementById('ruler-settings-modal');
-const closeRulerSettingsBtn = document.getElementById('close-ruler-settings');
-const fontSizeSlider = document.getElementById('font-size-slider');
-const fontSizeValue = document.getElementById('font-size-value');
-const spacingSlider = document.getElementById('spacing-slider');
-const spacingValue = document.getElementById('spacing-value');
-const applyRulerSettingsBtn = document.getElementById('apply-ruler-settings');
-
-rulerSettingsBtn.addEventListener('click', () => {
-  rulerSettingsModal.classList.add('show');
-});
-
-closeRulerSettingsBtn.addEventListener('click', () => {
-  rulerSettingsModal.classList.remove('show');
-});
-
-rulerSettingsModal.addEventListener('click', (e) => {
-  if (e.target === rulerSettingsModal) {
-    rulerSettingsModal.classList.remove('show');
-  }
-});
-
-fontSizeSlider.addEventListener('input', (e) => {
-  const size = parseInt(e.target.value);
-  fontSizeValue.textContent = size;
-  rulerSettings.fontSize = size;
-  rulerSettings.labelWidth = size * 8;
-  rulerSettings.labelHeight = size * 2;
-});
-
-spacingSlider.addEventListener('input', (e) => {
-  const spacing = parseInt(e.target.value);
-  spacingValue.textContent = spacing;
-  rulerSettings.spacing = spacing;
-  recalculateRegularModelsPositions();
-});
-
-applyRulerSettingsBtn.addEventListener('click', () => {
-  rulerSettingsModal.classList.remove('show');
-  updateAllRulers();
-});
-
-document.getElementById('clear-scene-btn').addEventListener('click', () => {
-  if (sceneModels.length === 0) return;
-  if (!confirm('Удалить все модели из сцены?')) return;
-  
-  sceneModels.forEach(model => {
-    scene.remove(model.group);
-    model.group.traverse(c => { if(c.geometry) c.geometry.dispose(); });
-    model.meshes.forEach(m => originalMaterials.delete(m.uuid));
-  });
-  sceneModels = [];
-  allMeshes = [];
-  selectedObjects = [];
-  updateSceneListUI();
-  
-  camera.position.set(0, 0, 10);
-  camera.lookAt(0, 0, 0);
-  controls.target.set(0, 0, 0);
-  controls.update();
-});
-
-document.getElementById('clear-rulers-btn').addEventListener('click', () => {
-  if (allRulerGroups.length === 0) {
-    alert('На сцене нет линеек.');
-    return;
-  }
-  clearAllRulers();
-});
-
-document.getElementById('screenshot-btn').addEventListener('click', () => {
   renderer.render(scene, camera);
   const dataUrl = renderer.domElement.toDataURL('image/png');
   const a = document.createElement('a');
   a.href = dataUrl;
-  a.download = 'model-' + Date.now() + '.png';
+  a.download = 'plan-' + Date.now() + '.png';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
 });
 
-// === ОБНОВЛЕННАЯ ФУНКЦИЯ ОТРИСОВКИ СПИСКОВ С КАТЕГОРИЕЙ ===
 function renderTextureList(containerId, items, category){
   const container = document.getElementById(containerId);
   container.innerHTML = '';
@@ -1421,13 +766,11 @@ function renderTextureList(containerId, items, category){
     const div = document.createElement('div');
     div.className = 'texture-item';
     div.innerHTML = `<img src="${tex.image}" loading="lazy" alt="${tex.name}"><div class="texture-name">${tex.name}</div>`;
-    // Передаем категорию ('standard', 'fantasy' или 'paint') при клике
     div.addEventListener('click', () => applyMaterial(tex.image, category));
     container.appendChild(div);
   });
 }
 
-// Вызываем с указанием категории
 renderTextureList('standard-list', standardTextures, 'standard');
 renderTextureList('fantasy-list', fantasyTextures, 'fantasy');
 renderTextureList('paint-list', paintTextures, 'paint');
@@ -1463,6 +806,19 @@ window.addEventListener('resize', () => {
   renderer.setSize(v.clientWidth, v.clientHeight);
 });
 
+// UI для режима антресоли
+const antresoleBtn = document.createElement('button');
+antresoleBtn.id = 'antresole-mode-btn';
+antresoleBtn.innerHTML = '🧲 Режим: Обычный шкаф';
+antresoleBtn.style.margin = '10px';
+document.getElementById('sidebar').insertBefore(antresoleBtn, document.getElementById('search-box'));
+
+antresoleBtn.addEventListener('click', () => {
+  isAntresoleMode = !isAntresoleMode;
+  antresoleBtn.classList.toggle('active', isAntresoleMode);
+  antresoleBtn.innerHTML = isAntresoleMode ? '🧲 Режим: Антресоль (вкл)' : '🧲 Режим: Обычный шкаф';
+});
+
 const modal = document.getElementById('instruction-modal');
 const helpBtn = document.getElementById('help-btn');
 const closeBtn = document.getElementById('close-modal');
@@ -1482,7 +838,7 @@ modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); }
 
 const today = new Date().toISOString().split('T')[0];
 if (!localStorage.getItem('configurator_help_seen_' + today)) {
-  setTimeout(openModal, 1500);
+  setTimeout(openModal, 1000);
 }
 
 loadModelsList();
