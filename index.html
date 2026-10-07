@@ -173,6 +173,20 @@ kbd {
 }
 .settings-value { display: inline-block; margin-left: 10px; color: #0044cc; font-weight: bold; min-width: 30px; text-align: right; }
 
+.wallpaper-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
+.wallpaper-item { 
+  width: 60px; height: 60px; border: 2px solid #ddd; border-radius: 4px; 
+  cursor: pointer; overflow: hidden; background: #eee; transition: 0.2s;
+}
+.wallpaper-item:hover { border-color: #0044cc; }
+.wallpaper-item img { width: 100%; height: 100%; object-fit: cover; }
+#remove-wallpaper-btn {
+  width: 100%; margin-top: 8px; padding: 6px; background: #ffe0e0; 
+  border: 1px solid #ff6666; color: #990000; border-radius: 4px; 
+  cursor: pointer; font-size: 11px; font-weight: bold; transition: 0.2s;
+}
+#remove-wallpaper-btn:hover { background: #ffd0d0; }
+
 @media (max-width: 600px) {
   .modal-content { padding: 18px; width: 95%; }
   .instruction-list li { font-size: 12px; margin-bottom: 10px; }
@@ -265,39 +279,22 @@ kbd {
     <h2>📖 Как пользоваться конфигуратором</h2>
     <ul class="instruction-list">
       <li><strong>1. Режимы работы.</strong> Вверху слева есть переключатель <strong>«Обычный / Расширенный»</strong>. В <strong>Обычном</strong> режиме вы можете добавить только одно изделие и раскрасить его детали. В <strong>Расширенном</strong> режиме можно расставить несколько изделий в комнате, поворачивать их, добавлять антресоли и измерять расстояния.</li>
-      
       <li><strong>2. Добавление изделий.</strong> Кликните по названию модели в каталоге слева. В обычном режиме изделие появится в центре сцены. В расширенном — тоже в центре, но с поворотом на 180° (лицом к вам). Если нужно несколько одинаковых изделий — кликайте по модели несколько раз.</li>
-      
       <li><strong>3. Перемещение (Расширенный режим).</strong> Зажмите <strong>левую кнопку мыши</strong> на любом изделии и тащите его в нужное место. Изделия автоматически примагничиваются друг к другу и к стенам, если расстояние между ними меньше 100 мм. Они не могут заходить друг в друга — система автоматически вытолкнет их.</li>
-      
       <li><strong>4. Поворот.</strong> Кликните на изделие, чтобы выделить его (оно подсветится красным). Затем нажмите <strong>правую кнопку мыши</strong> или клавишу <kbd>R</kbd> на клавиатуре — изделие повернётся на 90°. Можно нажимать несколько раз.</li>
-      
       <li><strong>5. Антресоли.</strong> В расширенном режиме внизу каталога есть кнопка <strong>«🧲 Режим: Антресоль»</strong>. Нажмите её (она станет зелёной), затем кликните по модели в каталоге. Антресоль автоматически встанет сверху на ближайший шкаф. При перемещении шкафа антресоль двигается вместе с ним. Чтобы добавить обычный шкаф — отключите кнопку.</li>
-      
       <li><strong>6. Выделение деталей для покраски.</strong> Кликните <strong>левой кнопкой мыши</strong> по детали на 3D-модели — она подсветится красным. Чтобы выделить несколько деталей одновременно, зажмите клавишу <kbd>Ctrl</kbd> (или <kbd>Cmd</kbd> на Mac) и кликайте по нужным деталям. Повторный клик с зажатым Ctrl снимает выделение.</li>
-      
       <li><strong>7. Покраска.</strong> После выделения деталей выберите цвет или текстуру на правой панели. Есть три вкладки:
         <br>• <strong>Стандартные</strong> — цвета ЛДСП (белый, дуб, орех и т.д.)
         <br>• <strong>Фантазийные</strong> — яркие цвета ЛДСП (красный, синий, зелёный и т.д.)
         <br>• <strong>Покраска</strong> — цвета только для фанерных деталей (детали с пометкой _FAN)
         <br>⚠️ <strong>Важно:</strong> Детали с пометкой _NON (технические: задняя стенка, кромки, фурнитура) не окрашиваются. Детали _FAN окрашиваются только цветами из вкладки «Покраска». Обычные детали (ЛДСП) окрашиваются только из вкладок «Стандартные» и «Фантазийные».</li>
-      
       <li><strong>8. Покраска всего изделия.</strong> Если включена галочка <strong>«Заменить весь цвет»</strong>, то цвет применится ко всем деталям выбранных изделий сразу (кроме _NON и _FAN). Галочка автоматически снимется после применения.</li>
-      
       <li><strong>9. Линейка.</strong> Нажмите кнопку <strong>«📏 Линейка»</strong> вверху сцены. Кликните на первую точку (можно на деталь или на пол), затем на вторую точку. Двигайте мышь в любую сторону — выноска с размером будет следовать за курсором. Кликните третий раз, чтобы зафиксировать размер. Можно ставить сколько угодно линеек из одной точки. Чтобы выключить линейку — нажмите кнопку ещё раз.</li>
-      
       <li><strong>10. Вид камеры.</strong> Кнопка <strong>«🔄 Вид сверху / Аксонометрия»</strong> переключает камеру. Вид сверху удобен для расстановки мебели (камера смотрит строго вниз). Аксонометрия — для оценки внешнего вида и покраски (камера под углом, можно вращать сцену).</li>
-      
-      <li><strong>11. Настройки комнаты.</strong> Нажмите кнопку <strong>⚙️</strong> вверху сцены. Откроется окно, где можно:
-        <br>• Изменить цвет пола
-        <br>• Изменить цвет стен
-        <br>• Настроить яркость освещения (200-500%)
-        <br>• Изменить размер текста на линейке (50-300 px)</li>
-      
+      <li><strong>11. Настройки комнаты.</strong> Нажмите кнопку <strong>⚙️</strong> вверху сцены. Откроется окно, где можно изменить цвет или <strong>текстуру (обои)</strong> стен, цвет пола, настроить яркость освещения (160-500%) и размер текста на линейке.</li>
       <li><strong>12. Удаление.</strong> В списке «Добавлено в сцену» (внизу левой панели) нажмите <strong>✕</strong> рядом с нужным изделием, чтобы удалить его. Кнопка <strong>«🗑️ Очистить сцену»</strong> удаляет все изделия. Кнопка <strong>«🗑️ Удалить линейки»</strong> убирает только размерные линии.</li>
-      
       <li><strong>13. Сохранение изображения.</strong> Нажмите <strong>«📷 Скачать изображение»</strong> — сохранится PNG-снимок текущего вида сцены без подсветки выделенных деталей.</li>
-      
       <li><strong>14. Сброс цвета.</strong> Кнопка <strong>«Вернуть материал»</strong> возвращает исходный цвет выделенным деталям (или всем, если ничего не выделено).</li>
     </ul>
     <div class="modal-note">
@@ -315,11 +312,16 @@ kbd {
       <label>Цвет пола: <input type="color" id="floor-color-picker" value="#ffffff"></label>
     </div>
     <div class="settings-group">
-      <label>Цвет стен: <input type="color" id="wall-color-picker" value="#c2c2c2"></label>
+      <label>Цвет стен: <input type="color" id="wall-color-picker" value="#808080"></label>
+    </div>
+    <div class="settings-group">
+      <label>Текстура стен (Обои):</label>
+      <div class="wallpaper-grid" id="wallpaper-list"></div>
+      <button id="remove-wallpaper-btn">Убрать обои (вернуть сплошной цвет)</button>
     </div>
     <div class="settings-group">
       <label>Яркость света: <span class="settings-value" id="light-value">160</span>%
-        <input type="range" id="light-slider" min="200" max="500" value="160">
+        <input type="range" id="light-slider" min="160" max="500" value="160">
       </label>
     </div>
     <div class="settings-group">
@@ -343,6 +345,13 @@ const ROOM_SIZE = 5000;
 const WALL_HEIGHT = 3000;
 const WALL_THICKNESS = 50;
 const SNAP_DISTANCE = 100;
+
+// === НАСТРОЙКА ОБОЕВ (Замените имена файлов на свои из папки textures/oboi/) ===
+const wallpaperTextures = [
+  { name: 'Обои 1', image: 'textures/oboi/wall1.jpg' },
+  { name: 'Обои 2', image: 'textures/oboi/wall2.jpg' },
+  { name: 'Обои 3', image: 'textures/oboi/wall3.jpg' }
+];
 
 const standardTextures = [
   {name:'Белый', image:'textures/belyy_6459_ultradecor.jpg'},
@@ -453,39 +462,29 @@ function setMode(mode) {
     updateSceneListUI();
   }
   
+  // ИЗМЕНЕНИЕ: Свет всегда 1.6 по умолчанию в обоих режимах
+  const intensity = 1.6;
+  if (ambientLight) ambientLight.intensity = intensity;
+  if (dirLight) dirLight.intensity = intensity;
+  if (leftLight) leftLight.intensity = intensity * 0.6;
+  if (rightLight) rightLight.intensity = intensity * 0.6;
+  if (frontLight) frontLight.intensity = intensity * 0.8;
+  
+  document.getElementById('light-slider').value = 160;
+  document.getElementById('light-value').textContent = 160;
+
   if (mode === 'basic') {
     isTopView = false;
     scene.background = new THREE.Color(0xffffff);
     if (floorMesh) floorMesh.visible = false;
     if (wallLeftMesh) wallLeftMesh.visible = false;
     if (wallRightMesh) wallRightMesh.visible = false;
-    
-    // Убавляем свет для обычного режима
-    const intensity = 1.6;
-    if (ambientLight) ambientLight.intensity = intensity;
-    if (dirLight) dirLight.intensity = intensity;
-    if (leftLight) leftLight.intensity = intensity * 0.6;
-    if (rightLight) rightLight.intensity = intensity * 0.6;
-    if (frontLight) frontLight.intensity = intensity * 0.8;
-    document.getElementById('light-slider').value = 160;
-    document.getElementById('light-value').textContent = 160;
-    
   } else {
     isTopView = true;
     scene.background = new THREE.Color(0xf0f0f0);
     if (floorMesh) floorMesh.visible = true;
     if (wallLeftMesh) wallLeftMesh.visible = true;
     if (wallRightMesh) wallRightMesh.visible = true;
-    
-    // Возвращаем яркий свет для расширенного режима
-    const intensity = 2.5;
-    if (ambientLight) ambientLight.intensity = intensity;
-    if (dirLight) dirLight.intensity = intensity;
-    if (leftLight) leftLight.intensity = intensity * 0.6;
-    if (rightLight) rightLight.intensity = intensity * 0.6;
-    if (frontLight) frontLight.intensity = intensity * 0.8;
-    document.getElementById('light-slider').value = 250;
-    document.getElementById('light-value').textContent = 250;
   }
   updateCameraView();
 }
@@ -514,9 +513,9 @@ function initScene(){
   floorMesh.visible = false;
   scene.add(floorMesh);
 
-  // ИЗМЕНЕНИЕ: Цвет стен по умолчанию серый (#c2c2c2)
+  // ИЗМЕНЕНИЕ: Более темный серый цвет стен по умолчанию (#808080)
   const wallLeftGeo = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, ROOM_SIZE);
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0xc2c2c2, side: THREE.DoubleSide });
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x808080, side: THREE.DoubleSide });
   wallLeftMesh = new THREE.Mesh(wallLeftGeo, wallMat);
   wallLeftMesh.position.set(WALL_THICKNESS/2, WALL_HEIGHT/2, ROOM_SIZE/2);
   wallLeftMesh.name = "wall";
@@ -539,7 +538,7 @@ function initScene(){
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // ИЗМЕНЕНИЕ: Начальная яркость света снижена для обычного режима
+  // ИЗМЕНЕНИЕ: Начальная яркость света 1.6
   const baseIntensity = 1.6;
   ambientLight = new THREE.AmbientLight(0xffffff, baseIntensity);
   scene.add(ambientLight);
@@ -1104,12 +1103,16 @@ viewport.addEventListener('click', (event) => {
   if(intersects.length > 0){
     const clickedObject = intersects[0].object;
     
+    // ИЗМЕНЕНИЕ: Улучшенная проверка Ctrl/Cmd для мультивыделения
     if (event.ctrlKey || event.metaKey) {
       const index = selectedObjects.indexOf(clickedObject);
-      if (index > -1) selectedObjects.splice(index, 1);
-      else selectedObjects.push(clickedObject);
+      if (index > -1) {
+        selectedObjects.splice(index, 1); // Убираем из выделения
+      } else {
+        selectedObjects.push(clickedObject); // Добавляем к выделению
+      }
     } else {
-      selectedObjects = [clickedObject];
+      selectedObjects = [clickedObject]; // Новое одиночное выделение
     }
 
     selectedObjects.forEach(obj => {
@@ -1166,6 +1169,7 @@ const lightValue = document.getElementById('light-value');
 const fontSizeSlider = document.getElementById('font-size-slider');
 const fontSizeValue = document.getElementById('font-size-value');
 const applyRoomSettingsBtn = document.getElementById('apply-room-settings');
+const removeWallpaperBtn = document.getElementById('remove-wallpaper-btn');
 
 roomSettingsBtn.addEventListener('click', () => {
   roomSettingsModal.classList.add('show');
@@ -1199,9 +1203,17 @@ applyRoomSettingsBtn.addEventListener('click', () => {
   const lightIntensity = parseInt(lightSlider.value) / 100;
   
   if (floorMesh) floorMesh.material.color.set(floorColor);
+  
+  // Если нет текстуры, применяем цвет. Если есть текстура, она перекроет цвет, но мы обновим его на будущее
   if (wallLeftMesh && wallRightMesh) {
-    wallLeftMesh.material.color.set(wallColor);
-    wallRightMesh.material.color.set(wallColor);
+    if (!wallLeftMesh.material.map) {
+      wallLeftMesh.material.color.set(wallColor);
+      wallLeftMesh.material.needsUpdate = true;
+    }
+    if (!wallRightMesh.material.map) {
+      wallRightMesh.material.color.set(wallColor);
+      wallRightMesh.material.needsUpdate = true;
+    }
   }
   
   if (ambientLight) ambientLight.intensity = lightIntensity;
@@ -1212,6 +1224,49 @@ applyRoomSettingsBtn.addEventListener('click', () => {
   
   updateAllRulers();
   roomSettingsModal.classList.remove('show');
+});
+
+// === ЛОГИКА ОБОЕВ ===
+function renderWallpapers() {
+  const container = document.getElementById('wallpaper-list');
+  container.innerHTML = '';
+  wallpaperTextures.forEach(wp => {
+    const div = document.createElement('div');
+    div.className = 'wallpaper-item';
+    div.innerHTML = `<img src="${wp.image}" title="${wp.name}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect width=%2260%22 height=%2260%22 fill=%22%23ddd%22/><text x=%2250%%22 y=%2250%%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2210%22 fill=%22%23999%22>Нет файла</text></svg>'">`;
+    div.onclick = () => applyWallpaper(wp.image);
+    container.appendChild(div);
+  });
+}
+
+function applyWallpaper(imagePath) {
+  const loader = new THREE.TextureLoader();
+  loader.load(imagePath, (tex) => {
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(2, 2); // Масштаб повторения обоев (можно менять)
+    
+    wallLeftMesh.material.map = tex;
+    wallLeftMesh.material.color.setHex(0xffffff); // Белый цвет, чтобы не искажать текстуру
+    wallLeftMesh.material.needsUpdate = true;
+
+    wallRightMesh.material.map = tex;
+    wallRightMesh.material.color.setHex(0xffffff);
+    wallRightMesh.material.needsUpdate = true;
+  }, undefined, (err) => {
+    console.error('Ошибка загрузки обоев:', err);
+    alert('Не удалось загрузить текстуру. Проверьте, лежит ли файл по пути: ' + imagePath);
+  });
+}
+
+removeWallpaperBtn.addEventListener('click', () => {
+  wallLeftMesh.material.map = null;
+  wallLeftMesh.material.color.set(wallColorPicker.value);
+  wallLeftMesh.material.needsUpdate = true;
+  
+  wallRightMesh.material.map = null;
+  wallRightMesh.material.color.set(wallColorPicker.value);
+  wallRightMesh.material.needsUpdate = true;
 });
 
 const textureLoader = new THREE.TextureLoader();
@@ -1346,6 +1401,7 @@ function renderTextureList(containerId, items, category){
 renderTextureList('standard-list', standardTextures, 'standard');
 renderTextureList('fantasy-list', fantasyTextures, 'fantasy');
 renderTextureList('paint-list', paintTextures, 'paint');
+renderWallpapers(); // Инициализация обоев
 
 function showLoading(text){
   document.getElementById('loading-text').innerText = text;
