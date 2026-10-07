@@ -219,8 +219,8 @@ kbd {
     </h3>
     <div id="scene-list"></div>
     <div class="scene-actions">
-      <button id="clear-rulers-btn">🗑️ Линейки</button>
-      <button id="clear-scene-btn">️ Сцена</button>
+      <button id="clear-rulers-btn">️ Линейки</button>
+      <button id="clear-scene-btn">🗑️ Сцена</button>
     </div>
   </div>
 </div>
@@ -231,7 +231,7 @@ kbd {
   <div id="controls-bar">
     <button id="view-toggle-btn" class="ctrl-btn secondary">🔄 Вид сверху</button>
     <button id="ruler-btn" class="ctrl-btn secondary">📏 Линейка (выкл)</button>
-    <button id="settings-btn" class="ctrl-btn icon-btn" title="Настройки комнаты">⚙️</button>
+    <button id="settings-btn" class="ctrl-btn icon-btn" title="Настройки комнаты">️</button>
   </div>
 
   <div id="settings-panel">
@@ -261,7 +261,7 @@ kbd {
 <div id="instruction-modal" class="modal-backdrop">
   <div class="modal-content">
     <button class="modal-close" id="close-modal">&times;</button>
-    <h2> Как пользоваться конфигуратором</h2>
+    <h2>📖 Как пользоваться конфигуратором</h2>
     <ul class="instruction-list">
       <li><strong>Обычный режим.</strong> Кликните по модели — она появится в центре. Выделите деталь и выберите цвет.</li>
       <li><strong>Расширенный режим.</strong> Кликните по модели — она появится с поворотом 180°. Зажмите <strong>левую кнопку мыши</strong> для перемещения. Изделия примагничиваются друг к другу и к стенам.</li>
@@ -269,10 +269,10 @@ kbd {
       <li><strong>Антресоли.</strong> Включите «🧲 Режим: Антресоль» перед кликом. Антресоль перемещается вместе со своим шкафом.</li>
       <li><strong>Раскраска нескольких деталей.</strong> Зажмите <kbd>Ctrl</kbd> и кликайте по разным деталям — все они выделятся красным. Затем выберите цвет. Галочка «Заменить весь цвет» перекрасит все детали <strong>только выбранных изделий</strong>.</li>
       <li><strong>Линейка.</strong> Нажмите «📏 Линейка». Кликните на первую точку (изделие или пол), затем на вторую. Двигайте мышь для выноски, кликните для фиксации.</li>
-      <li><strong>Настройки.</strong> Нажмите ️ для изменения цвета стен/пола, яркости света (100-300%) и размера текста линейки.</li>
+      <li><strong>Настройки.</strong> Нажмите ⚙️ для изменения цвета стен/пола, яркости света (100-300%) и размера текста линейки.</li>
     </ul>
     <div class="modal-note">
-       <em>Детали _NON не окрашиваются. Детали _FAN — только из вкладки «Покраска».</em>
+      💡 <em>Детали _NON не окрашиваются. Детали _FAN — только из вкладки «Покраска».</em>
     </div>
     <button class="modal-ok-btn" id="modal-ok">Всё понятно!</button>
   </div>
@@ -281,12 +281,12 @@ kbd {
 <div id="room-settings-modal" class="modal-backdrop">
   <div class="modal-content">
     <button class="modal-close" id="close-room-settings">&times;</button>
-    <h2>️ Настройки комнаты</h2>
+    <h2>⚙️ Настройки комнаты</h2>
     <div class="settings-group">
       <label>Цвет пола: <input type="color" id="floor-color-picker" value="#ffffff"></label>
     </div>
     <div class="settings-group">
-      <label>Цвет стен: <input type="color" id="wall-color-picker" value="#d0d0d0"></label>
+      <label>Цвет стен: <input type="color" id="wall-color-picker" value="#f0f0f0"></label>
     </div>
     <div class="settings-group">
       <label>Яркость света: <span class="settings-value" id="light-value">150</span>%
@@ -310,7 +310,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const MODELS_URL = 'models/models.json';
 const RAW_BASE = 'models/';
 
-const ROOM_SIZE = 4000;
+const ROOM_SIZE = 5000;
 const WALL_HEIGHT = 3000;
 const WALL_THICKNESS = 50;
 const SNAP_DISTANCE = 100;
@@ -467,7 +467,7 @@ function initScene(){
   scene.add(floorMesh);
 
   const wallLeftGeo = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, ROOM_SIZE);
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0xd0d0d0, side: THREE.DoubleSide });
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, side: THREE.DoubleSide });
   wallLeftMesh = new THREE.Mesh(wallLeftGeo, wallMat);
   wallLeftMesh.position.set(WALL_THICKNESS/2, WALL_HEIGHT/2, ROOM_SIZE/2);
   wallLeftMesh.name = "wall";
@@ -490,7 +490,6 @@ function initScene(){
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // Освещение по умолчанию 150% (1.5)
   const baseIntensity = 1.5;
   ambientLight = new THREE.AmbientLight(0xffffff, baseIntensity);
   scene.add(ambientLight);
@@ -530,12 +529,12 @@ function updateCameraView() {
     controls.target.set(0, 500, 0);
     controls.enableRotate = true;
   } else if (isTopView) {
-    camera.position.set(ROOM_SIZE/2, 6000, ROOM_SIZE/2);
+    camera.position.set(ROOM_SIZE/2, 8000, ROOM_SIZE/2);
     camera.lookAt(ROOM_SIZE/2, 0, ROOM_SIZE/2);
     controls.target.set(ROOM_SIZE/2, 0, ROOM_SIZE/2);
     controls.enableRotate = false;
   } else {
-    camera.position.set(ROOM_SIZE/2 + 3000, 3000, ROOM_SIZE/2 + 3000);
+    camera.position.set(ROOM_SIZE/2 + 4000, 3500, ROOM_SIZE/2 + 4000);
     camera.lookAt(ROOM_SIZE/2, 1000, ROOM_SIZE/2);
     controls.target.set(ROOM_SIZE/2, 1000, ROOM_SIZE/2);
     controls.enableRotate = true;
@@ -718,7 +717,6 @@ function resolveCollisionsAndSnap(movingGroup, excludeId) {
     const otherDepth = otherBox.max.z - otherBox.min.z;
     const otherWidth = otherBox.max.x - otherBox.min.x;
     
-    // 1. Проверка на пересечение (выталкивание)
     if (movingBox.intersectsBox(otherBox)) {
       const overlapX = Math.min(movingBox.max.x, otherBox.max.x) - Math.max(movingBox.min.x, otherBox.min.x);
       const overlapZ = Math.min(movingBox.max.z, otherBox.max.z) - Math.max(movingBox.min.z, otherBox.min.z);
@@ -732,7 +730,6 @@ function resolveCollisionsAndSnap(movingGroup, excludeId) {
       }
       movingBox.setFromObject(movingGroup);
     } else {
-      // 2. Магнитное примагничивание по X (боковые грани)
       if (Math.abs(movingBox.min.x - otherBox.max.x) < SNAP_DISTANCE) {
         movingGroup.position.x += (otherBox.max.x - movingBox.min.x);
         movingBox.setFromObject(movingGroup);
@@ -741,16 +738,13 @@ function resolveCollisionsAndSnap(movingGroup, excludeId) {
         movingBox.setFromObject(movingGroup);
       }
       
-      // 3. Магнитное примагничивание по Z (передние/задние грани)
       const depthDiff = Math.abs(movingDepth - otherDepth);
       if (depthDiff < DEPTH_MATCH_TOLERANCE) {
-        // Одинаковая глубина — выравниваем по центру
         const movingCenterZ = (movingBox.min.z + movingBox.max.z) / 2;
         const otherCenterZ = (otherBox.min.z + otherBox.max.z) / 2;
         movingGroup.position.z += (otherCenterZ - movingCenterZ);
         movingBox.setFromObject(movingGroup);
       } else {
-        // Разная глубина — примагничиваем по грани
         if (Math.abs(movingBox.min.z - otherBox.max.z) < SNAP_DISTANCE) {
           movingGroup.position.z += (otherBox.max.z - movingBox.min.z);
           movingBox.setFromObject(movingGroup);
@@ -762,7 +756,6 @@ function resolveCollisionsAndSnap(movingGroup, excludeId) {
     }
   }
   
-  // 4. Примагничивание к стенам
   const box = new THREE.Box3().setFromObject(movingGroup);
   if (box.min.x < WALL_THICKNESS + SNAP_DISTANCE) {
     movingGroup.position.x += (WALL_THICKNESS - box.min.x);
@@ -1068,7 +1061,6 @@ viewport.addEventListener('click', (event) => {
     const clickedObject = intersects[0].object;
     
     if (event.ctrlKey || event.metaKey) {
-      // Ctrl+клик: добавляем/убираем из текущего выделения
       const index = selectedObjects.indexOf(clickedObject);
       if (index > -1) {
         selectedObjects.splice(index, 1);
@@ -1076,15 +1068,12 @@ viewport.addEventListener('click', (event) => {
         selectedObjects.push(clickedObject);
       }
     } else {
-      // Обычный клик: сбрасываем всё и выделяем только новое
       selectedObjects = [clickedObject];
     }
   } else {
-    // Клик в пустоту — сбрасываем выделение
     selectedObjects = [];
   }
 
-  // Обновляем подсветку всех мешей
   allMeshes.forEach(m => {
     const mats = Array.isArray(m.material) ? m.material : [m.material];
     mats.forEach(mt => { if(mt.emissive) mt.emissive.setHex(0x000000); });
@@ -1482,7 +1471,7 @@ const rulerBtn = document.getElementById('ruler-btn');
 rulerBtn.addEventListener('click', () => {
   rulerMode = !rulerMode;
   if (rulerMode) {
-    rulerBtn.textContent = '📏 Линейка (вкл)';
+    rulerBtn.textContent = ' Линейка (вкл)';
     rulerBtn.classList.add('active');
     controls.enabled = false;
     showTooltip('Кликните на первую точку (изделие или пол), затем на вторую. Двигайте мышь для выноски. Кликните для фиксации.');
