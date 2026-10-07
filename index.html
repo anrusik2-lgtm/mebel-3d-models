@@ -245,7 +245,7 @@ kbd {
   
   <div id="controls-bar">
     <button id="view-toggle-btn" class="ctrl-btn secondary">🔄 Вид сверху</button>
-    <button id="ruler-btn" class="ctrl-btn secondary">📏 Линейка (выкл)</button>
+    <button id="ruler-btn" class="ctrl-btn secondary"> Линейка (выкл)</button>
     <button id="settings-btn" class="ctrl-btn icon-btn" title="Настройки комнаты">⚙️</button>
   </div>
 
@@ -265,7 +265,7 @@ kbd {
     </div>
     
     <button id="reset-btn">Вернуть материал</button>
-    <button id="screenshot-btn">📷 Скачать изображение</button>
+    <button id="screenshot-btn"> Скачать изображение</button>
   </div>
   
   <div id="tooltip"></div>
@@ -346,7 +346,6 @@ const WALL_HEIGHT = 3000;
 const WALL_THICKNESS = 50;
 const SNAP_DISTANCE = 100;
 
-// === НАСТРОЙКА ОБОЕВ (Замените имена файлов на свои из папки textures/oboi/) ===
 const wallpaperTextures = [
   { name: 'Обои 1', image: 'textures/oboi/1.jpg' },
   { name: 'Обои 2', image: 'textures/oboi/2.jpg' }
@@ -430,6 +429,7 @@ let isDragging = false;
 let dragObject = null;
 let dragOffset = new THREE.Vector3();
 let mouseDownPos = new THREE.Vector2();
+let mouseDownTime = 0;
 
 let rulerMode = false;
 let rulerState = 'waiting_first';
@@ -461,7 +461,6 @@ function setMode(mode) {
     updateSceneListUI();
   }
   
-  // ИЗМЕНЕНИЕ: Свет всегда 1.6 по умолчанию в обоих режимах
   const intensity = 1.6;
   if (ambientLight) ambientLight.intensity = intensity;
   if (dirLight) dirLight.intensity = intensity;
@@ -512,7 +511,6 @@ function initScene(){
   floorMesh.visible = false;
   scene.add(floorMesh);
 
-  // ИЗМЕНЕНИЕ: Более темный серый цвет стен по умолчанию (#808080)
   const wallLeftGeo = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, ROOM_SIZE);
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x808080, side: THREE.DoubleSide });
   wallLeftMesh = new THREE.Mesh(wallLeftGeo, wallMat);
@@ -537,7 +535,6 @@ function initScene(){
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // ИЗМЕНЕНИЕ: Начальная яркость света 1.6
   const baseIntensity = 1.6;
   ambientLight = new THREE.AmbientLight(0xffffff, baseIntensity);
   scene.add(ambientLight);
@@ -860,6 +857,7 @@ const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
 viewport.addEventListener('mousedown', (event) => {
   mouseDownPos.set(event.clientX, event.clientY);
+  mouseDownTime = Date.now();
   
   if (event.button !== 0) return;
   if (currentMode !== 'advanced') return;
@@ -1032,12 +1030,14 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+// === ИСПРАВЛЕННАЯ ЛОГИКА ВЫДЕЛЕНИЯ С Ctrl ===
 viewport.addEventListener('click', (event) => {
   if (event.target !== renderer.domElement) return;
   
+  // Фильтр: игнорируем клики после перетаскивания
   const dist = Math.hypot(event.clientX - mouseDownPos.x, event.clientY - mouseDownPos.y);
-  if (dist > 5) return;
-  if (isDragging) return;
+  const timeDiff = Date.now() - mouseDownTime;
+  if (dist > 5 || timeDiff > 300) return;
 
   const rect = viewport.getBoundingClientRect();
   mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -1093,36 +1093,51 @@ viewport.addEventListener('click', (event) => {
 
   const intersects = raycaster.intersectObjects(allMeshes, true);
 
+  // Сбрасываем все выделения
   allMeshes.forEach(m => {
     const mats = Array.isArray(m.material) ? m.material : [m.material];
     mats.forEach(mt => { if(mt.emissive) mt.emissive.setHex(0x000000); });
   });
-  selectedObjects = [];
 
   if(intersects.length > 0){
     const clickedObject = intersects[0].object;
     
-    // ИЗМЕНЕНИЕ: Улучшенная проверка Ctrl/Cmd для мультивыделения
+    // === ИСПРАВЛЕНИЕ: Ctrl+клик для мультивыделения ===
     if (event.ctrlKey || event.metaKey) {
+      // Предотвращаем стандартное поведение браузера
+      event.preventDefault();
+      
       const index = selectedObjects.indexOf(clickedObject);
       if (index > -1) {
-        selectedObjects.splice(index, 1); // Убираем из выделения
+        // Убираем из выделения
+        selectedObjects.splice(index, 1);
+        const selMats = Array.isArray(clickedObject.material) ? clickedObject.material : [clickedObject.material];
+        selMats.forEach(m => { if(m.emissive) m.emissive.setHex(0x000000); });
       } else {
-        selectedObjects.push(clickedObject); // Добавляем к выделению
+        // Добавляем к выделению
+        selectedObjects.push(clickedObject);
+        const selMats = Array.isArray(clickedObject.material) ? clickedObject.material : [clickedObject.material];
+        selMats.forEach(m => { if(m.emissive) m.emissive.setHex(0xff0000); });
       }
+      
+      console.log('Выделено деталей:', selectedObjects.length);
+      console.log('Имена:', selectedObjects.map(o => o.name));
     } else {
-      selectedObjects = [clickedObject]; // Новое одиночное выделение
-    }
-
-    selectedObjects.forEach(obj => {
-      const selMats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      // Одиночное выделение
+      selectedObjects = [clickedObject];
+      const selMats = Array.isArray(clickedObject.material) ? clickedObject.material : [clickedObject.material];
       selMats.forEach(m => { if(m.emissive) m.emissive.setHex(0xff0000); });
-    });
+      
+      console.log('Выделена 1 деталь:', clickedObject.name);
+    }
     
     if (currentMode === 'advanced') {
-      showTooltip('💡 Правая кнопка мыши или R — повернуть. Зажмите левую кнопку мыши — переместить');
+      showTooltip('💡 Правая кнопка мыши или R — повернуть. Зажмите левую кнопку мыши — переместить. Ctrl+клик — мультивыделение');
       setTimeout(() => hideTooltip(), 3000);
     }
+  } else {
+    // Клик в пустоту - снимаем выделение
+    selectedObjects = [];
   }
 });
 
@@ -1130,7 +1145,7 @@ function toggleView() {
   isTopView = !isTopView;
   updateCameraView();
   const btn = document.getElementById('view-toggle-btn');
-  btn.textContent = isTopView ? '🔄 Вид сверху' : '🔄 Аксонометрия';
+  btn.textContent = isTopView ? ' Вид сверху' : '🔄 Аксонометрия';
 }
 
 document.getElementById('view-toggle-btn').addEventListener('click', toggleView);
@@ -1203,7 +1218,6 @@ applyRoomSettingsBtn.addEventListener('click', () => {
   
   if (floorMesh) floorMesh.material.color.set(floorColor);
   
-  // Если нет текстуры, применяем цвет. Если есть текстура, она перекроет цвет, но мы обновим его на будущее
   if (wallLeftMesh && wallRightMesh) {
     if (!wallLeftMesh.material.map) {
       wallLeftMesh.material.color.set(wallColor);
@@ -1225,7 +1239,6 @@ applyRoomSettingsBtn.addEventListener('click', () => {
   roomSettingsModal.classList.remove('show');
 });
 
-// === ЛОГИКА ОБОЕВ ===
 function renderWallpapers() {
   const container = document.getElementById('wallpaper-list');
   container.innerHTML = '';
@@ -1243,10 +1256,10 @@ function applyWallpaper(imagePath) {
   loader.load(imagePath, (tex) => {
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(2, 2); // Масштаб повторения обоев (можно менять)
+    tex.repeat.set(2, 2);
     
     wallLeftMesh.material.map = tex;
-    wallLeftMesh.material.color.setHex(0xffffff); // Белый цвет, чтобы не искажать текстуру
+    wallLeftMesh.material.color.setHex(0xffffff);
     wallLeftMesh.material.needsUpdate = true;
 
     wallRightMesh.material.map = tex;
@@ -1270,6 +1283,7 @@ removeWallpaperBtn.addEventListener('click', () => {
 
 const textureLoader = new THREE.TextureLoader();
 
+// === ИСПРАВЛЕННАЯ ЛОГИКА ПОКРАСКИ ===
 function applyMaterial(value, category) {
   const applyToAllCheckbox = document.getElementById('apply-to-all');
   const applyToAll = applyToAllCheckbox.checked;
@@ -1304,22 +1318,27 @@ function applyMaterial(value, category) {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     
-    let hasPaintAttempt = false;
-    let hasLdspAttempt = false;
+    let paintedCount = 0;
+    let skippedNon = [];
+    let skippedFan = [];
+    let skippedLdsp = [];
     
     group.forEach(obj => {
       const objName = obj.name || "";
       const isNon = objName.endsWith('_NON');
       const isFan = objName.endsWith('_FAN');
 
-      if (isNon) return;
+      if (isNon) {
+        skippedNon.push(objName);
+        return;
+      }
       
       if (isFan && category !== 'paint') {
-        hasLdspAttempt = true;
+        skippedFan.push(objName);
         return;
       }
       if (!isFan && category === 'paint') {
-        hasPaintAttempt = true;
+        skippedLdsp.push(objName);
         return;
       }
 
@@ -1329,14 +1348,38 @@ function applyMaterial(value, category) {
         m.color.setHex(0xffffff);
         m.needsUpdate = true;
       });
+      paintedCount++;
     });
     
-    if (hasPaintAttempt) {
-      alert('⚠️ Цвета из вкладки «Покраска» предназначены только для фанерных деталей (с пометкой _FAN).\n\nВыбранные вами детали — из ЛДСП. Используйте цвета из вкладок «Стандартные» или «Фантазийные».');
+    // Показываем alert только если НИ ОДНА деталь не была окрашена
+    if (paintedCount === 0) {
+      let message = '⚠️ Ни одна деталь не была окрашена.\n\n';
+      
+      if (skippedFan.length > 0) {
+        message += `Выбранные детали — фанерные (с пометкой _FAN):\n${skippedFan.slice(0, 5).join(', ')}${skippedFan.length > 5 ? '...' : ''}\n\n`;
+        message += 'Используйте цвета из вкладки «Покраска».';
+      } else if (skippedLdsp.length > 0) {
+        message += `Выбранные детали — из ЛДСП:\n${skippedLdsp.slice(0, 5).join(', ')}${skippedLdsp.length > 5 ? '...' : ''}\n\n`;
+        message += 'Используйте цвета из вкладок «Стандартные» или «Фантазийные».';
+      } else if (skippedNon.length > 0) {
+        message += `Выбранные детали — технические (_NON):\n${skippedNon.slice(0, 5).join(', ')}${skippedNon.length > 5 ? '...' : ''}\n\n`;
+        message += 'Технические детали не окрашиваются.';
+      }
+      
+      alert(message);
+    } else if (skippedFan.length > 0 || skippedLdsp.length > 0) {
+      // Частичная окраска - показываем предупреждение в tooltip
+      let warning = '';
+      if (skippedFan.length > 0) {
+        warning = `️ Пропущено фанерных деталей (_FAN): ${skippedFan.length}. Используйте вкладку «Покраска».`;
+      } else if (skippedLdsp.length > 0) {
+        warning = `⚠️ Пропущено деталей ЛДСП: ${skippedLdsp.length}. Используйте вкладки «Стандартные» или «Фантазийные».`;
+      }
+      showTooltip(warning);
+      setTimeout(() => hideTooltip(), 4000);
     }
-    if (hasLdspAttempt) {
-      alert('⚠️ Цвета из вкладок «Стандартные» и «Фантазийные» предназначены для деталей из ЛДСП.\n\nВыбранные вами детали — фанерные (с пометкой _FAN). Используйте цвета из вкладки «Покраска».');
-    }
+    
+    console.log(`Окрашено деталей: ${paintedCount}`);
   }, undefined, (err) => {
     console.error('Не удалось загрузить текстуру:', value, err);
   });
@@ -1400,7 +1443,7 @@ function renderTextureList(containerId, items, category){
 renderTextureList('standard-list', standardTextures, 'standard');
 renderTextureList('fantasy-list', fantasyTextures, 'fantasy');
 renderTextureList('paint-list', paintTextures, 'paint');
-renderWallpapers(); // Инициализация обоев
+renderWallpapers();
 
 function showLoading(text){
   document.getElementById('loading-text').innerText = text;
