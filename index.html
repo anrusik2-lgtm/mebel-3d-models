@@ -1,0 +1,3151 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>3D Конфигуратор</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, Segoe UI, sans-serif; overflow: hidden; background: #f0f0f0; color: #333; touch-action: none; }
+#canvas { display: block; width: 100vw; height: 100vh; background: #ffffff; cursor: default; }
+
+.panel {
+    position: absolute; background: rgba(255,255,255,0.95);
+    border: 1px solid #ddd; border-radius: 8px; padding: 12px;
+    backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+#topBar { top: 10px; left: 10px; right: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+#leftPanel { top: 60px; left: 10px; width: 260px; max-height: calc(100vh - 80px); overflow-y: auto; }
+#rightPanel { top: 60px; right: 10px; width: 280px; max-height: calc(100vh - 80px); overflow-y: auto; }
+#bottomBar { bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+button, label.btn, select, input[type="text"] {
+    background: #f5f5f5; color: #333; border: 1px solid #ccc;
+    padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+button:hover, label.btn:hover { background: #e0e0e0; }
+button.active { background: #4a7cff; color: #fff; border-color: #4a7cff; }
+button.danger { background: #ff4a4a; color: #fff; border-color: #ff4a4a; }
+
+h3 { font-size: 12px; margin-bottom: 8px; color: #4a7cff; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
+.section { margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+
+#searchInput { width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
+
+.texture-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-height: 350px; overflow-y: auto; }
+.texture-item {
+    aspect-ratio: 1; border-radius: 6px; cursor: pointer; border: 2px solid transparent;
+    background-color: #eee; background-size: cover; background-position: center; position: relative;
+    transition: transform 0.1s;
+}
+.texture-item:hover { transform: scale(1.05); border-color: #4a7cff; }
+.texture-item.selected { border-color: #4a7cff; box-shadow: 0 0 0 2px #4a7cff; }
+.texture-item span {
+    position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6);
+    color: #fff; font-size: 9px; padding: 2px 4px; text-align: center;
+    border-radius: 0 0 4px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.model-item { background: #f9f9f9; padding: 8px; border-radius: 6px; margin-bottom: 6px; cursor: pointer; font-size: 12px; border: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.model-item:hover { background: #eef4ff; border-color: #4a7cff; }
+.model-item.selected { border-color: #4a7cff; background: #e0ebff; font-weight: bold; }
+.model-item .remove-btn { 
+    color: #ff4a4a; cursor: pointer; font-size: 18px; padding: 4px 8px; 
+    border-radius: 4px; transition: background 0.2s; font-weight: bold;
+}
+.model-item .remove-btn:hover { background: #ffe0e0; }
+
+.tab-bar { display: flex; gap: 4px; margin-bottom: 4px; flex-wrap: wrap; }
+.tab-bar button { 
+    flex: 1 0 48%; 
+    padding: 8px 4px; 
+    font-size: 12px; 
+    line-height: 1.2; 
+    white-space: nowrap;
+    min-width: 0; 
+}
+.tab-bar button.full-width {
+    flex: 1 0 100%;
+}
+.tab-bar button.active { background: #4a7cff; color: #fff; }
+
+#selectedInfo { font-size: 12px; margin-bottom: 8px; padding: 8px; background: #f0f4ff; border-radius: 6px; border-left: 3px solid #4a7cff; }
+#selectedInfo .locked { color: #ff4a4a; font-weight: bold; }
+#selectedInfo .ok { color: #28a745; font-weight: bold; }
+
+#progressOverlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255,255,255,0.98); display: none; align-items: center; justify-content: center;
+    z-index: 10000; flex-direction: column;
+}
+#progressOverlay.show { display: flex; }
+#progressBar { width: 300px; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin-top: 16px; }
+#progressFill { height: 100%; background: #4a7cff; width: 0%; transition: width 0.2s; }
+#progressText { font-size: 18px; font-weight: bold; color: #4a7cff; }
+
+#roomModal, #saveModal, #helpModal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 10000;
+}
+#roomModal.show, #saveModal.show, #helpModal.show { display: flex; }
+.modal-content {
+    background: #fff; padding: 24px; border-radius: 12px; width: 420px; max-width: 90vw;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center;
+    z-index: 10001;
+}
+.modal-content.help-content {
+    width: 650px; text-align: left; max-height: 85vh; overflow-y: auto;
+}
+.modal-row { margin-bottom: 16px; text-align: left; }
+.modal-row label { display: block; font-size: 13px; margin-bottom: 6px; font-weight: bold; }
+.modal-row input[type="color"], .modal-row input[type="range"] { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 6px; }
+.wallpaper-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 200px; overflow-y: auto; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
+.wallpaper-item {
+    aspect-ratio: 1; border-radius: 4px; cursor: pointer; border: 2px solid transparent;
+    background-size: cover; background-position: center; transition: transform 0.1s;
+}
+.wallpaper-item:hover { transform: scale(1.05); }
+.wallpaper-item.selected { border-color: #4a7cff; }
+.wallpaper-item.no-texture { background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #666; }
+
+#flash {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(255, 80, 80, 0.95); color: #fff; padding: 12px 24px; border-radius: 8px;
+    font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 10000;
+    text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-top: 8px; cursor: pointer; }
+.checkbox-label input { cursor: pointer; }
+
+#savePreview { max-width: 100%; max-height: 60vh; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 16px; background: #fff; }
+
+.help-section { margin-bottom: 16px; }
+.help-section h4 { color: #4a7cff; margin-bottom: 6px; font-size: 14px; }
+.help-section ul { padding-left: 20px; font-size: 13px; line-height: 1.6; color: #444; }
+.help-section li { margin-bottom: 6px; }
+.help-section b { color: #222; }
+
+@media (max-width: 768px) {
+    #rightPanel, #leftPanel { width: 90vw; left: 5vw; right: 5vw; }
+    #rightPanel { top: auto; bottom: 80px; max-height: 50vh; }
+    #leftPanel { top: 60px; max-height: 40vh; }
+    .tab-bar button { font-size: 11px; padding: 6px 2px; }
+    .modal-content.help-content { width: 95vw; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="progressOverlay">
+    <div id="progressText">0%</div>
+    <div id="progressBar"><div id="progressFill"></div></div>
+</div>
+
+<div id="topBar" class="panel">
+    <button id="modeSimple" class="active"> Обычный</button>
+    <button id="modeAdvanced">🏗️ Расширенный</button>
+    <button id="btnSaveImage" style="background: #28a745; color: #fff; border-color: #28a745;">💾 Сохранить изображение</button>
+    <button id="btnHelp">❓ Помощь</button>
+    <span id="status" style="margin-left:auto; font-size:12px; color:#666;">Загрузка...</span>
+</div>
+
+<div id="leftPanel" class="panel">
+    <div class="section">
+        <h3> Каталог моделей</h3>
+        <input type="text" id="searchInput" placeholder="Поиск...">
+        <div id="catalogList" style="max-height: 400px; overflow-y: auto;">
+            <div style="font-size:12px; color:#888; padding:8px;">Загрузка...</div>
+        </div>
+    </div>
+    <div class="section" id="sceneSection" style="display:none">
+        <h3>🎬 На сцене</h3>
+        <div id="sceneList" style="max-height: 200px; overflow-y: auto;"></div>
+    </div>
+</div>
+
+<div id="rightPanel" class="panel">
+    <div class="section">
+        <h3>🎨 Изменить цвет</h3>
+        <div id="selectedInfo">Кликните по детали модели</div>
+        <label class="checkbox-label">
+            <input type="checkbox" id="paintAllCheckbox">
+            <span>Окрашивать всю модель</span>
+        </label>
+        
+        <div class="tab-bar" style="margin-top:8px;">
+            <button id="tabLdsp" class="active">Цвет ЛДСП</button>
+            <button id="tabFanera">Цвет Фанеры</button>
+            <button id="tabCountertop">Цвет Столешниц</button>
+            <button id="tabSoft">Цвет Мягкой</button>
+            <button id="tabMetal" class="full-width">Цвет Металлокаркаса</button>
+        </div>
+        
+        <div id="subTabLdsp" class="tab-bar" style="margin-top: 4px; border-top: 1px solid #ddd; padding-top: 8px;">
+            <button id="tabLdspStandard" class="active">Стандартные</button>
+            <button id="tabLdspFantasy">Фантазийные</button>
+        </div>
+        
+        <div id="subTabSoft" class="tab-bar" style="margin-top: 4px; border-top: 1px solid #ddd; padding-top: 8px; display: none;">
+            <button id="tabLeather" class="active">Кожзам</button>
+            <button id="tabFabric">Ткань</button>
+        </div>
+        
+        <div class="texture-grid" id="textureGrid"></div>
+        <button id="btnResetMat" style="width:100%; margin-top:12px;">↩️ Вернуть материал</button>
+        
+        <label class="checkbox-label" style="margin-top: 12px;">
+            <input type="checkbox" id="showDimensionsCheckbox">
+            <span>Показать габаритные размеры</span>
+        </label>
+    </div>
+    <div class="section" id="transformSection" style="display:none">
+        <h3>📐 Высота</h3>
+        <div style="margin-bottom:8px;">
+            <label style="font-size:11px;">Высота от пола (Y): <input type="number" id="posY" step="10" min="0" style="width:100%"></label>
+        </div>
+    </div>
+</div>
+
+<div id="bottomBar" class="panel">
+    <button id="btnMagnet" class="active" style="display:none;">🧲 Магнит</button>
+    <button id="btnRoomSettings" style="display:none;">🏠 Комната</button>
+    <button id="btnRuler" style="display:none;">📏 Линейка</button>
+    <button id="btnClearRulers" class="danger" style="display:none;">🗑️ Удалить все линейки</button>
+    <button id="btnClear" class="danger">🗑️ Очистить всё</button>
+</div>
+
+<div id="flash"></div>
+
+<div id="roomModal">
+    <div class="modal-content">
+        <h3 style="margin-bottom:16px; font-size:16px; text-align: left;">⚙️ Настройки комнаты</h3>
+        <div class="modal-row">
+            <label>Цвет пола</label>
+            <input type="color" id="floorColor" value="#cccccc">
+        </div>
+        <div class="modal-row">
+            <label>Текстура стен (Обои)</label>
+            <div class="wallpaper-grid" id="wallpaperGrid">
+                <div class="wallpaper-item no-texture selected" data-value="">Сплошной цвет</div>
+            </div>
+        </div>
+        <div class="modal-row">
+            <label>Цвет стен (если без текстуры)</label>
+            <input type="color" id="wallColor" value="#f0f0f0">
+        </div>
+        <div class="modal-row">
+            <label>Яркость освещения: <span id="lightValue">85%</span></label>
+            <input type="range" id="lightIntensity" min="50" max="200" value="85">
+        </div>
+        <div style="display:flex; gap:8px; margin-top:24px;">
+            <button id="btnApplyRoom" style="flex:1; background:#4a7cff; color:#fff;">Применить</button>
+            <button id="btnCloseRoom" style="flex:1;">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<div id="saveModal">
+    <div class="modal-content">
+        <h3 style="margin-bottom: 16px; font-size: 16px;">Сохранить изображение</h3>
+        <img id="savePreview" src="" alt="Предпросмотр">
+        <div style="display: flex; gap: 8px; justify-content: center;">
+            <button id="btnDownloadImage" style="background: #28a745; color: #fff; border-color: #28a745;">Скачать PNG</button>
+            <button id="btnCloseSave" style="background: #f5f5f5;">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<div id="helpModal">
+    <div class="modal-content help-content">
+        <h3 style="margin-bottom:16px; font-size:18px; text-align: center; color: #4a7cff;">📖 Подробная справка по программе</h3>
+        
+        <div class="help-section">
+            <h4>🖱️ Управление камерой</h4>
+            <ul>
+                <li><b>Левая кнопка мыши (ЛКМ):</b> Вращение модели вокруг центра.</li>
+                <li><b>Правая кнопка мыши (ПКМ):</b> Панорамирование (сдвиг камеры).</li>
+                <li><b>Колесико мыши:</b> Приближение и удаление (Zoom).</li>
+                <li><b>На мобильном устройстве:</b> Один палец — вращение, два пальца — масштабирование и сдвиг.</li>
+                <li><b>Двойной клик</b по детали скрывает её.</li>
+				<li><b>Alt + ЛКМ:</b> Панорамирование (сдвиг камеры) — удобно, когда правая кнопка мыши занята поворотом изделия.</li>
+            </ul>
+        </div>
+
+        <div class="help-section">
+            <h4>🎨 Окрашивание материалов</h4>
+            <ul>
+                <li>Кликните по детали, чтобы выбрать её (она подсветится).</li>
+                <li>Выберите нужную <b>вкладку материала</b> (ЛДСП, Фанера, Столешницы и т.д.).</li>
+                <li>Кликните по текстуре, чтобы применить её.</li>
+                <li><b>Важно:</b> Если вы видите предупреждение <i>"Этот материал нельзя окрасить выбранной текстурой"</i>, значит, вы пытаетесь накрасить, например, ткань на ДСП. Переключитесь на правильную вкладку.</li>
+                <li>Галочка <b>"Окрашивать всю модель"</b> применит цвет ко всем деталям выбранной категории в изделии.</li>
+                <li>Кнопка <b>"Вернуть материал"</b> сбрасывает цвет детали к заводскому.</li>
+				<li><b>Ctrl + клик</b> по детали — добавляет её к уже выбранным, не снимая предыдущие. Так можно покрасить сразу несколько деталей за один раз. Обычный клик без Ctrl сбрасывает выделение и выбирает только одну деталь.</li>
+            </ul>
+        </div>
+
+        <div class="help-section">
+            <h4>📏 Линейка и Габариты</h4>
+            <ul>
+                <li><b>Добавить линейку:</b> Нажмите кнопку "Линейка". 1-й клик — первая точка, 2-й клик — вторая точка, 3-й клик — направление выноски (просто кликните в нужном месте экрана).</li>
+                <li><b>Удалить линейку:</b> Кликните прямо по тексту или линии нужной размерной линии, чтобы удалить только её. Или нажмите кнопку <b>"Удалить все линейки"</b> на нижней панели.</li>
+                <li><b>Габариты:</b> Включите чекбокс "Показать габаритные размеры" в правой панели. Размеры (ШхВхГ) отобразятся по верхним граням изделия.</li>
+            </ul>
+        </div>
+
+        <div class="help-section">
+            <h4>🏗️ Расширенный режим и Магнит</h4>
+            <ul>
+                <li>Позволяет добавлять несколько изделий на сцену.</li>
+                <li><b>Перетаскивание:</b> Зажмите ЛКМ на изделии и тяните. Если включен <b>"Магнит"</b>, изделия будут "прилипать" к стенам и друг к другу, не пересекаясь.</li>
+                <li><b>ПКМ по изделию:</b> Поворот изделия на 90°.</li>
+                <li><b>Средний клик (нажатие на колесико):</b> Анимация (открытие/закрытие дверей и ящиков).</li>
+            </ul>
+        </div>
+
+        <button onclick="document.getElementById('helpModal').classList.remove('show')" style="width:100%; margin-top:16px; background:#4a7cff; color:#fff; border:none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: bold;">Понятно, закрыть</button>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ============================================================
+//  ДАННЫЕ ТЕКСТУР
+// ============================================================
+const standardTextures = [
+  {name:'Белый', image:'textures/belyy_6459_ultradecor.jpg'},
+  {name:'Берёза', image:'textures/bereza_1715_ultradecor.jpg'},
+  {name:'Бежевый льняной', image:'textures/bezhevyy_lnyanoy_m.328_ultradecor.jpg'},
+  {name:'Бук Бавария', image:'textures/buk_bavariya_0381_ultradecor_.jpg'},
+  {name:'Чёрный', image:'textures/chernyy_u2200m_extravert.jpg'},
+  {name:'Дуб Атланта', image:'textures/dub_atlanta_nordeco.jpg'},
+  {name:'Дуб Феррара', image:'textures/dub_ferrara_8921_ultradecor.jpg'},
+  {name:'Дуб коломенский молочный', image:'textures/dub_kolomenskiy_molochnyy_d.341_extravert_.jpg'},
+  {name:'Дуб млечный', image:'textures/dub_mlechnyy_nordeco.jpg'},
+  {name:'Дуб Шамони светлый', image:'textures/dub_shamoni_svetlyy_004_ultradecor.jpg'},
+  {name:'Дуб Сонома', image:'textures/dub_sonoma_3025_ultradecor.jpg'},
+  {name:'Клён', image:'textures/klen_0375_ultradecor.jpg'},
+  {name:'Ольха классическая', image:'textures/olkha_klassicheskaya.jpg'},
+  {name:'Орех Экко', image:'textures/orekh_ekko_9459_ultradecor.jpg'},
+  {name:'Орех Гварнери', image:'textures/orekh_gvarneri_9455_ultradecor.jpg'},
+  {name:'Орех Мария-Луиза', image:'textures/orekh_mariya_luiza_(italyanskiy)_9490_ultradecor.jpg'},
+  {name:'Венге Цаво', image:'textures/venge_tsavo_3354_ultradecor.jpg'},
+  {name:'Вишня Оксфорд', image:'textures/vishnya_oksford.jpg'},
+  {name:'Ясень Шимо светлый', image:'textures/yasen_shimo_svetlyy_3356_ultradecor.jpg'},
+  {name:'Ясень Шимо тёмный', image:'textures/yasen_shimo_temnyy_3357_ultradecor.jpg'},
+];
+
+const fantasyTextures = [
+  {name:'Лимонный сорбет', image:'textures/limonnyy_sorbet_7123_ultradecor.jpg'},
+  {name:'Песочный', image:'textures/pesochnyy_0515_ultradecor.jpg'},
+  {name:'Оранжевый цитрус', image:'textures/oranzhevyy_tsitrusovyy_m702_extravert.jpg'},
+  {name:'Розовый маревый', image:'textures/rozovyy_marevyy_m.705_extravert.jpg'},
+  {name:'Салатовый', image:'textures/salatovyy.jpg'},
+  {name:'Солнечный свет', image:'textures/solnechnyy_svet_0134_ultradecor.jpg'},
+  {name:'Лимонный', image:'textures/limonnyy_nordeco.jpg'},
+  {name:'Ирис', image:'textures/iris_lamarty.jpg'},
+  {name:'Зелёный лайм', image:'textures/zelenyy_laym_5519_ultradecor.jpg'},
+  {name:'Зелёный ивовый', image:'textures/zelyonyy_ivovyy_m607_extravert.jpg'},
+  {name:'Зелёный мятный', image:'textures/zelyonyy_myatnyy_m605_extravert.jpg'},
+  {name:'Зелёный оксид', image:'textures/zelyonyy_oksid_6561_ultradecor.jpg'},
+  {name:'Красный', image:'textures/krasnyy_0149_ultradecor.jpg'},
+  {name:'Королевский синий', image:'textures/korolevskiy_siniy_0125_ultradecor.jpg'},
+  {name:'Лазурный голубой', image:'textures/lazurnyy_goluboy_k517_ultradecor.jpg'},
+  {name:'Капри синий', image:'textures/kapri_siniy_0121_ultradecor.jpg'},
+  {name:'Лаванда', image:'textures/lavanda_u7501_uvadrev_.jpg'},
+  {name:'Аура', image:'textures/aura_lamarty.jpg'},
+];
+
+const paintTextures = [
+  {name:'Серый', image:'textures/S168.jpg'}, {name:'Бежевый', image:'textures/G100.jpg'},
+  {name:'Сиреневый', image:'textures/H148.jpg'}, {name:'Фиолетовый', image:'textures/K148.jpg'},
+  {name:'Небесно-голубой', image:'textures/V021.jpg'}, {name:'Салатовый', image:'textures/H050.jpg'},
+  {name:'Лимонный', image:'textures/G081.jpg'}, {name:'Желтый', image:'textures/L077.jpg'},
+  {name:'Оранжевый', image:'textures/L089.jpg'}, {name:'Розовый', image:'textures/H141.jpg'},
+  {name:'Зеленый', image:'textures/L052.jpg'}, {name:'Красный', image:'textures/L134.jpg'},
+  {name:'Синий', image:'textures/Y077.jpg'}, {name:'Голубой', image:'textures/K016.jpg'}
+];
+
+const leatherTextures = [
+  {name:'Бежевый 424/2', image:'textures/Bezhevyj_MM.jpg'}, {name:'Капучино 429/2', image:'textures/Kapuchino_MM.jpg'},
+  {name:'Серый 614/2', image:'textures/Seryj_MM.jpg'}, {name:'Пудровый 427/2', image:'textures/Pudovij.jpg'},
+  {name:'Бордовый 112/2/102', image:'textures/Bordovyj_MM.jpg'}, {name:'Графит 991/2', image:'textures/Grafit.jpg'},
+  {name:'Шоколад 307/2', image:'textures/Shokolad.jpg'}, {name:'Черный 900/2', image:'textures/Chernyj_MM.jpg'},
+  {name:'Белый 550/2', image:'textures/Belyj_MM.jpg'}, {name:'Синий 705/2', image:'textures/Sinij_MM.jpg'},
+  {name:'Красный 105/2', image:'textures/Krasnyj_MM.jpg'}, {name:'Желтый 415/2', image:'textures/Zheltyj_MM.jpg'},
+  {name:'Зеленый 86/2', image:'textures/Zelenyj_MM.jpg'}, {name:'Розовый 107/2', image:'textures/Rozovyj_MM.jpg'},
+  {name:'Салатовый 85/2', image:'textures/Salatovyj_MM.jpg'}, {name:'Сиреневый 710/2', image:'textures/Sirenevyj_MM.jpg'},
+  {name:'Малиновый', image:'textures/Malinovyj_MM.jpg'}, {name:'Фиолетовый 711/2', image:'textures/Fioletovyj_MM.jpg'},
+  {name:'Оранжевый 417/2', image:'textures/Oranzhevyj_MM.jpg'}, {name:'Голубой 707/2', image:'textures/Goluboj_MM.jpg'},
+  {name:'Оливковый 800/2', image:'textures/Olivkovyj_MM.jpg'}, {name:'Фисташковый 803/2', image:'textures/Fistashkovij.jpg'}
+];
+
+const fabricTextures = [
+  {name:'Kotofey 01', image:'textures/KOTOFEY_01.jpg'}, {name:'Kit cat', image:'textures/Kit-cat.jpg'},
+  {name:'Kosmopuziki', image:'textures/Kosmopuziki.jpg'}, {name:'Mashinki', image:'textures/Mashinki.jpg'},
+  {name:'Марконафт', image:'textures/Markonaft.jpg'}, {name:'Зефирка', image:'textures/Zefirka.jpg'},
+  {name:'Легого', image:'textures/Legogo.jpg'}, {name:'Мехико', image:'textures/Mexico.jpg'},
+  {name:'Мордашки', image:'textures/Mordashki.jpg'}, {name:'Шарики', image:'textures/Shariki.jpg'},
+  {name:'Xpoint 0011.01', image:'textures/Xpoint_0011.01.jpg'}, {name:'Xpoint 0037.01', image:'textures/Xpoint_0037.01.jpg'},
+  {name:'Xpoint 0037.02', image:'textures/Xpoint_0037.02.jpg'}, {name:'Xpoint 0051.01', image:'textures/Xpoint_0051.01.jpg'},
+  {name:'Карасики', image:'textures/Karasiki.jpg'}, {name:'Мишки', image:'textures/Mishki.jpg'},
+  {name:'Принцесски', image:'textures/Princesski.jpg'}, {name:'НЛО', image:'textures/NLO.jpg'},
+  {name:'Зебра 11', image:'textures/Zebra_11.jpg'}, {name:'Зебра 20', image:'textures/Zebra_20.jpg'},
+  {name:'Цирк', image:'textures/Cirk.jpg'}, {name:'Акробат 08', image:'textures/Akrobat_08.jpg'},
+  {name:'Акробат 10', image:'textures/Akrobat_10.jpg'}, {name:'Коты 01', image:'textures/Koty_01.jpg'},
+  {name:'Декор Xpoint 0004.01', image:'textures/Xpoint_0004.01.jpg'}, {name:'Декор Xpoint 0006.01', image:'textures/Xpoint_0006.01.jpg'},
+  {name:'Декор Xpoint 0007.01', image:'textures/Xpoint_0007.01.jpg'}, {name:'Декор Xpoint 0005.01', image:'textures/Xpoint_0005.01.jpg'},
+  {name:'Лион 305', image:'textures/Lion_305.jpg'}, {name:'Лион 306', image:'textures/Lion_306.jpg'},
+  {name:'Пони 01', image:'textures/Poni_01.jpg'}, {name:'Пони 03', image:'textures/Poni_03.jpg'},
+  {name:'Пони 04', image:'textures/Poni_04.jpg'}, {name:'Пони 05', image:'textures/Poni_05.jpg'},
+  {name:'Черный С11', image:'textures/Chernyj_S11.jpg'}, {name:'Серый С73', image:'textures/Seryj_S73.jpg'}
+];
+
+const metalTextures = [
+  {name:'Бежевый', image:'textures/Bezhevyj_MK.jpg'}, {name:'Белый', image:'textures/Belyj_MK.jpg'},
+  {name:'Черный', image:'textures/Chernyj_MK.jpg'}, {name:'Коричневый', image:'textures/Korichnevyj_MK.jpg'},
+  {name:'Серый', image:'textures/Seryj_MK.jpg'}, {name:'Металлик', image:'textures/Metallik_MK.jpg'},
+  {name:'Красный', image:'textures/Krasnyj_MK.jpg'}, {name:'Желтый', image:'textures/Zheltyj_MK.jpg'},
+  {name:'Синий', image:'textures/Sinij_MK.jpg'}, {name:'Зеленый', image:'textures/Zelenyj_MK.jpg'}
+];
+
+const countertopTextures = [
+  {name:'БЕЛЫЙ', image:'textures/10M.jpg'}, {name:'ОЛИВА', image:'textures/051M.jpg'},
+  {name:'ОНИКС БЕЖЕВЫЙ', image:'textures/100MA.jpg'}, {name:'ДУГЛАС СВЕТЛЫЙ', image:'textures/133M.jpg'},
+  {name:'КИАНИТ', image:'textures/4057M.jpg'}, {name:'МРАМОР ЛАЦИО БЕЛЫЙ', image:'textures/056AM.jpg'},
+  {name:'НЕБУЛА', image:'textures/3154M.jpg'}, {name:'КАНАДСКИЙ ДУБ', image:'textures/3230M.jpg'},
+  {name:'АЛАМБРА', image:'textures/4026M.jpg'}, {name:'СЕМОЛИНА СЕРАЯ', image:'textures/3043M.jpg'},
+  {name:'СЕМОЛИНА БЕЖЕВАЯ', image:'textures/Semolina_bezhevaya_3042M.jpg'}
+];
+
+let currentTab = 'ldsp_standard';
+
+// ============================================================
+//  THREE.JS СЦЕНА
+// ============================================================
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xffffff);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 50000);
+camera.position.set(2000, 1500, 2000);
+
+const controls = {
+    target: new THREE.Vector3(0, 0, 0), rotating: false, panning: false, lastX: 0, lastY: 0,
+    spherical: { radius: 3000, phi: Math.PI/3, theta: Math.PI/4 },
+    update() {
+        const s = this.spherical;
+        camera.position.set(
+            this.target.x + s.radius * Math.sin(s.phi) * Math.cos(s.theta),
+            this.target.y + s.radius * Math.cos(s.phi),
+            this.target.z + s.radius * Math.sin(s.phi) * Math.sin(s.theta)
+        );
+        camera.lookAt(this.target);
+    }
+};
+controls.update();
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(1500, 2000, 1000);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(2048, 2048);
+scene.add(dirLight);
+
+const floorMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.9 });
+const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), floorMat);
+floorMesh.rotation.x = -Math.PI/2;
+floorMesh.position.set(5000, 0, 5000);
+floorMesh.receiveShadow = true; floorMesh.name = "floor";
+scene.add(floorMesh);
+
+const wallThickness = 50;
+const wallHeight = 3000;
+const wallLength = 5000;
+const wallMat = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.9 });
+
+const wall1 = new THREE.Mesh(new THREE.BoxGeometry(wallLength, wallHeight, wallThickness), wallMat);
+wall1.position.set(wallLength/2, wallHeight/2, -wallThickness/2);
+wall1.receiveShadow = true; wall1.name = "wall1"; wall1.visible = false;
+scene.add(wall1);
+
+const wall2 = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, wallLength), wallMat);
+wall2.position.set(-wallThickness/2, wallHeight/2, wallLength/2);
+wall2.receiveShadow = true; wall2.name = "wall2"; wall2.visible = false;
+scene.add(wall2);
+
+// ============================================================
+//  СОСТОЯНИЕ
+// ============================================================
+let MODE = 'simple';
+let catalog = [];
+let sceneItems = [];
+let currentModelData = null;
+let selectedItem = null;
+let selectedMeshes = [];
+let magnetEnabled = true;
+let ctrlPressed = false;
+
+let isDragging = false;
+let isPanning = false;
+let potentialDrag = false;
+let dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+let dragOffset = new THREE.Vector3();
+let dragStartPos = new THREE.Vector2();
+let hasDragged = false;
+let dragStartGroup = null;
+
+const HIGHLIGHT_COLOR = 0xffaaaa;
+
+let lastAppliedRoom = {
+    floorColor: '#cccccc',
+    wallColor: '#f0f0f0',
+    wallTexture: '',
+    lightIntensity: 85
+};
+
+// ============================================================
+//  ПРОГРЕСС-БАР
+// ============================================================
+const progressOverlay = document.getElementById('progressOverlay');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+
+function showProgress(percent, text) {
+    progressOverlay.classList.add('show');
+    progressFill.style.width = percent + '%';
+    progressText.textContent = Math.round(percent) + '%';
+}
+
+function hideProgress() {
+    setTimeout(() => {
+        progressOverlay.classList.remove('show');
+        progressFill.style.width = '0%';
+    }, 500);
+}
+
+// ============================================================
+//  ЗАГРУЗКА КАТАЛОГА
+// ============================================================
+async function loadCatalog() {
+    try {
+        showProgress(5, 'Загрузка каталога...');
+        const response = await fetch('Models/catalog.json');
+        if (!response.ok) throw new Error('Нет catalog.json');
+        const list = await response.json();
+        
+        catalog = [];
+        for (let i = 0; i < list.length; i++) {
+            const item = list[i];
+            try {
+                showProgress(5 + ((i + 1) / list.length) * 90, `Загрузка: ${item.file}`);
+                const res = await fetch(`Models/${item.file}`);
+                const data = await res.json();
+                catalog.push({ name: data.meta.modelName || item.file.replace('.json', ''), data, file: item.file });
+            } catch (e) { console.error('Ошибка загрузки', item.file, e); }
+        }
+        
+        showProgress(100, 'Готово!');
+        document.getElementById('status').textContent = `Загружено: ${catalog.length} моделей`;
+        renderCatalog();
+        setTimeout(hideProgress, 800);
+    } catch (err) {
+        document.getElementById('status').innerHTML = `<span style="color:red">Ошибка: нужен файл Models/catalog.json</span>`;
+        hideProgress();
+    }
+}
+
+function renderCatalog(filter = '') {
+    const list = document.getElementById('catalogList');
+    list.innerHTML = '';
+    const filtered = catalog.filter(m => m.name.toLowerCase().includes(filter.toLowerCase()));
+    
+    filtered.forEach((m) => {
+        const div = document.createElement('div');
+        div.className = 'model-item';
+        div.textContent = m.name;
+        div.onclick = () => {
+            if (MODE === 'simple') {
+                loadSimpleModel(m.data);
+            } else {
+                addToScene(m.data);
+            }
+            document.querySelectorAll('#catalogList .model-item').forEach(el => el.classList.remove('selected'));
+            div.classList.add('selected');
+        };
+        list.appendChild(div);
+    });
+}
+
+document.getElementById('searchInput').addEventListener('input', (e) => renderCatalog(e.target.value));
+
+function loadSimpleModel(data) {
+    scene.children.slice().forEach(c => { if (c.userData.isModel) scene.remove(c); });
+    sceneItems = []; selectedItem = null; selectedMeshes = []; updateSceneList();
+    buildAndAddModel(data, new THREE.Vector3(0, 0, 0), 0, true);
+    focusCamera();
+}
+
+// ============================================================
+//  ПАРСИНГ И ДОБАВЛЕНИЕ МОДЕЛИ
+// ============================================================
+function unpackMesh(packed) {
+    const bytes = Uint8Array.from(atob(packed), c => c.charCodeAt(0));
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let off = 0;
+    const posLen = dv.getUint32(off, true); off += 4;
+    const pos = new Float32Array(posLen);
+    for (let i = 0; i < posLen; i++) { pos[i] = dv.getFloat32(off, true); off += 4; }
+    const norLen = dv.getUint32(off, true); off += 4;
+    const nor = new Float32Array(norLen);
+    for (let i = 0; i < norLen; i++) { nor[i] = dv.getFloat32(off, true); off += 4; }
+    const uvLen = dv.getUint32(off, true); off += 4;
+    const uvMin = dv.getFloat32(off, true); off += 4;
+    const uvRange = dv.getFloat32(off, true); off += 4;
+    let uv = null;
+    if (uvLen > 0) {
+        uv = new Float32Array(uvLen);
+        const uv16 = new Uint16Array(uvLen);
+        for (let i = 0; i < uvLen; i++) { uv16[i] = dv.getUint16(off, true); off += 2; }
+        for (let i = 0; i < uvLen; i++) uv[i] = uvMin + (uv16[i] / 65535) * uvRange;
+    }
+    return { pos, nor, uv };
+}
+
+function loadTexture(url) {
+    return new Promise((resolve, reject) => {
+        const loader = new THREE.TextureLoader();
+        loader.load(url, (tex) => {
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            resolve(tex);
+        }, undefined, reject);
+    });
+}
+
+async function buildAndAddModel(data, position, rotationY, isSimple) {
+    const materials = data.materials.map(m => {
+        let color = 0x888888; if (m.colorHex) color = parseInt(m.colorHex, 16);
+        return {
+            color, hasTexture: m.hasTexture, textureDataUrl: m.textureDataUrl,
+            name: m.name, opacity: m.opacity !== undefined ? m.opacity : 1.0,
+            paintCategory: m.paintCategory || 'ldsp',
+            loadedTexture: null
+        };
+    });
+
+    const texturePromises = [];
+    materials.forEach((mat, idx) => {
+        if (mat.hasTexture && mat.textureDataUrl) {
+            texturePromises.push(
+                loadTexture(mat.textureDataUrl).then(tex => {
+                    materials[idx].loadedTexture = tex;
+                }).catch(() => {
+                    materials[idx].hasTexture = false;
+                })
+            );
+        }
+    });
+    
+    await Promise.all(texturePromises);
+
+    const rootGroup = new THREE.Group();
+    rootGroup.userData.isModel = true;
+    rootGroup.userData.targetY = position.y;
+    
+    if (!isSimple) {
+        rootGroup.userData.sceneItem = {
+            id: Date.now() + Math.random(),
+            data: data,
+            materials: materials,
+            rotationY: rotationY,
+            position: position.clone(),
+            targetY: position.y
+        };
+        sceneItems.push(rootGroup.userData.sceneItem);
+        updateSceneList();
+    }
+
+    const groups = {};
+    for (const obj of data.objects) {
+        const group = new THREE.Group();
+        group.userData.uid = obj.uid;
+        group.userData.name = obj.name;
+        if (obj.position) group.position.set(obj.position.x, obj.position.y, obj.position.z);
+        if (obj.rotation) group.quaternion.set(obj.rotation.x, obj.rotation.y, obj.rotation.z, obj.rotation.w);
+        groups[obj.uid] = group;
+    }
+
+    for (const obj of data.objects) {
+        if (obj.parentUID && groups[obj.parentUID]) {
+            groups[obj.parentUID].add(groups[obj.uid]);
+        } else {
+            rootGroup.add(groups[obj.uid]);
+        }
+    }
+
+    for (const obj of data.objects) {
+        if (obj.animation) {
+            groups[obj.uid].userData.animation = {
+                ...obj.animation,
+                isOpen: false, currentAngle: 0, currentShift: 0,
+                origPosition: groups[obj.uid].position.clone(),
+                origQuaternion: groups[obj.uid].quaternion.clone()
+            };
+        }
+    }
+
+    for (const obj of data.objects) {
+        if (!obj.meshes) continue;
+        const group = groups[obj.uid];
+        
+        for (const m of obj.meshes) {
+            let pos, nor, uv;
+            if (m.packed) { const u = unpackMesh(m.packed); pos = u.pos; nor = u.nor; uv = u.uv; }
+            else { pos = new Float32Array(m.positions); nor = m.normals ? new Float32Array(m.normals) : null; uv = m.uvs ? new Float32Array(m.uvs) : null; }
+            
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            if (nor) geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); else geo.computeVertexNormals();
+            if (uv) geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+
+            const mat = materials[m.materialId];
+            let threeMat;
+            if (mat.hasTexture && mat.loadedTexture) {
+                threeMat = new THREE.MeshStandardMaterial({ map: mat.loadedTexture, roughness: 0.7, opacity: mat.opacity, transparent: mat.opacity < 1.0 });
+            } else {
+                threeMat = new THREE.MeshStandardMaterial({ color: mat.color, roughness: 0.7, metalness: 0.05, opacity: mat.opacity, transparent: mat.opacity < 1.0 });
+            }
+            const mesh = new THREE.Mesh(geo, threeMat);
+            mesh.castShadow = true; mesh.receiveShadow = true;
+            mesh.userData.parentGroup = group;
+            mesh.userData.materialId = m.materialId;
+            mesh.userData.paintCategory = mat.paintCategory;
+            mesh.userData.materialName = mat.name;
+            mesh.userData.origColor = mat.color;
+            mesh.userData.origTexture = mat.hasTexture ? mat.textureDataUrl : null;
+            mesh.userData.origEmissive = 0x000000;
+            group.add(mesh);
+        }
+    }
+
+    if (isSimple) {
+        rootGroup.position.set(0,0,0);
+    } else {
+        rootGroup.position.copy(position);
+        rootGroup.rotation.y = rotationY * Math.PI / 180;
+    }
+    scene.add(rootGroup);
+    return rootGroup;
+}
+
+// ============================================================
+//  РАСШИРЕННЫЙ РЕЖИМ
+// ============================================================
+function addToScene(data) {
+    let pos = new THREE.Vector3(0, 0, 500);
+    if (sceneItems.length > 0) {
+        const lastItem = sceneItems[sceneItems.length - 1];
+        const lastGroup = scene.children.find(c => c.userData.sceneItem === lastItem);
+        if (lastGroup) {
+            const box = new THREE.Box3().setFromObject(lastGroup);
+            pos.set(box.max.x + 100, 0, 0);
+        }
+    }
+    buildAndAddModel(data, pos, 0, false);
+    focusCamera();
+}
+
+function updateSceneList() {
+    const list = document.getElementById('sceneList');
+    list.innerHTML = '';
+    sceneItems.forEach((it, idx) => {
+        const div = document.createElement('div');
+        div.className = 'model-item' + (selectedItem === it ? ' selected' : '');
+        div.innerHTML = `<span style="flex:1;">${it.data.meta.modelName}</span><span class="remove-btn" onclick="removeItem(${idx}, event)" title="Удалить">️</span>`;
+        div.onclick = (e) => { if (!e.target.classList.contains('remove-btn')) selectSceneItem(it); };
+        list.appendChild(div);
+    });
+}
+window.removeItem = (idx, e) => {
+    e.stopPropagation();
+    const item = sceneItems[idx];
+    scene.children.slice().forEach(c => { if (c.userData.sceneItem === item) scene.remove(c); });
+    sceneItems.splice(idx, 1);
+    if (selectedItem === item) { 
+        selectedItem = null; 
+        selectedMeshes = []; 
+        document.getElementById('selectedInfo').textContent = 'Кликните по детали модели';
+    }
+    updateSceneList();
+};
+
+function selectSceneItem(item) {
+    selectedItem = item;
+    updateSceneList();
+    const group = scene.children.find(c => c.userData.sceneItem === item);
+    if (group) {
+        document.getElementById('posY').value = Math.round(group.userData.targetY || group.position.y);
+    }
+}
+
+document.getElementById('posY').addEventListener('change', e => {
+    if (!selectedItem) return;
+    const group = scene.children.find(c => c.userData.sceneItem === selectedItem);
+    if (group) {
+        let newY = parseFloat(e.target.value);
+        if (newY < 0) newY = 0;
+        group.position.y = newY;
+        group.userData.targetY = newY;
+        selectedItem.position.copy(group.position);
+        selectedItem.targetY = newY;
+        resolveCollisions(group);
+    }
+});
+
+function rotateSelectedItem() {
+    if (!selectedItem) {
+        return;
+    }
+    const group = scene.children.find(c => c.userData.sceneItem === selectedItem);
+    if (group) {
+        const box = new THREE.Box3().setFromObject(group);
+        const center = box.getCenter(new THREE.Vector3());
+        
+        const pivot = new THREE.Object3D();
+        pivot.position.copy(center);
+        scene.add(pivot);
+        
+        pivot.attach(group);
+        pivot.rotation.y += Math.PI / 2;
+        selectedItem.rotationY = ((selectedItem.rotationY || 0) + 90) % 360;
+        
+        scene.attach(group);
+        scene.remove(pivot);
+        
+        clampToWalls(group);
+        resolveCollisions(group);
+    }
+}
+
+function clampToWalls(group) {
+    const box = new THREE.Box3().setFromObject(group);
+    if (box.min.x < 0) group.position.x += -box.min.x;
+    if (box.min.z < 0) group.position.z += -box.min.z;
+}
+
+// ИСПРАВЛЕННЫЙ МАГНИТ И КОЛЛИЗИИ
+function resolveCollisions(group, maxIterations = 10) {
+    const box = new THREE.Box3().setFromObject(group);
+    for (let iter = 0; iter < maxIterations; iter++) {
+        let moved = false;
+        sceneItems.forEach(other => {
+            if (other === selectedItem) return;
+            const otherGroup = scene.children.find(c => c.userData.sceneItem === other);
+            if (!otherGroup) return;
+            const otherBox = new THREE.Box3().setFromObject(otherGroup);
+            
+            if (box.intersectsBox(otherBox)) {
+                const overlapX = Math.min(box.max.x, otherBox.max.x) - Math.max(box.min.x, otherBox.min.x);
+                const overlapY = Math.min(box.max.y, otherBox.max.y) - Math.max(box.min.y, otherBox.min.y);
+                const overlapZ = Math.min(box.max.z, otherBox.max.z) - Math.max(box.min.z, otherBox.min.z);
+                
+                // Выталкиваем по оси наименьшего проникновения + 1мм зазор, чтобы не залипало
+                if (overlapX <= overlapZ && overlapX <= overlapY) {
+                    group.position.x += (box.min.x < otherBox.min.x) ? -overlapX - 1 : overlapX + 1;
+                } else if (overlapZ <= overlapX && overlapZ <= overlapY) {
+                    group.position.z += (box.min.z < otherBox.min.z) ? -overlapZ - 1 : overlapZ + 1;
+                } else {
+                    group.position.y += (box.min.y < otherBox.min.y) ? -overlapY - 1 : overlapY + 1;
+                }
+                moved = true;
+                box.setFromObject(group); // Пересчитываем box для следующей итерации
+            }
+        });
+        if (!moved) break;
+    }
+    clampToWalls(group);
+    if (group.userData.sceneItem) group.userData.sceneItem.position.copy(group.position);
+}
+
+// ============================================================
+//  ВЗАИМОДЕЙСТВИЕ
+// ============================================================
+function getMouse(e) {
+    const rect = canvas.getBoundingClientRect();
+    return new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+}
+
+function findRootModelGroup(obj) {
+    let current = obj;
+    while (current) {
+        if (current.userData && current.userData.isModel) return current;
+        current = current.parent;
+    }
+    return null;
+}
+
+document.addEventListener('keydown', (e) => { if (e.key === 'Control') ctrlPressed = true; });
+document.addEventListener('keyup', (e) => { if (e.key === 'Control') ctrlPressed = false; });
+
+canvas.addEventListener('mousedown', e => {
+    if (isRulerMode) {
+        hasDragged = false;
+        return;
+    }
+    dragStartPos.set(e.clientX, e.clientY);
+    hasDragged = false;
+    dragStartGroup = null;
+    potentialDrag = false;
+    
+    if (e.button === 0) {
+        if (e.altKey) {
+            isPanning = true; controls.rotating = false; controls.lastX = e.clientX; controls.lastY = e.clientY; return;
+        }
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(getMouse(e), camera);
+        const meshes = [];
+        scene.traverse(o => { if (o.isMesh && findRootModelGroup(o)) meshes.push(o); });
+        const hits = raycaster.intersectObjects(meshes, false);
+        
+        if (hits.length > 0) {
+            const rootGroup = findRootModelGroup(hits[0].object);
+            if (MODE === 'advanced' && rootGroup && rootGroup.userData.sceneItem) {
+                potentialDrag = true; dragStartGroup = rootGroup; controls.rotating = false;
+                dragOffset.copy(hits[0].point).sub(rootGroup.position);
+            }
+        } else {
+            controls.rotating = true;
+        }
+    }
+    if (e.button === 2) controls.panning = true;
+    controls.lastX = e.clientX; controls.lastY = e.clientY;
+});
+
+canvas.addEventListener('mousemove', e => {
+    if (isRulerMode) {
+        updateRulerPreview(e);
+        return;
+    }
+    const dist = Math.sqrt((e.clientX - dragStartPos.x)**2 + (e.clientY - dragStartPos.y)**2);
+    if (dist > 5 && potentialDrag && !isDragging) { isDragging = true; hasDragged = true; controls.rotating = false; }
+    if (dist > 5) hasDragged = true;
+    
+    if (isDragging && dragStartGroup) {
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(getMouse(e), camera);
+        const target = new THREE.Vector3();
+        if (raycaster.ray.intersectPlane(dragPlane, target)) {
+            dragStartGroup.position.copy(target).sub(dragOffset);
+            dragStartGroup.position.y = dragStartGroup.userData.targetY || 0;
+            if (magnetEnabled) snapToWallsAndItems(dragStartGroup);
+            else clampToWalls(dragStartGroup);
+            if (dragStartGroup.userData.sceneItem) dragStartGroup.userData.sceneItem.position.copy(dragStartGroup.position);
+        }
+    } else if (isPanning || controls.panning) {
+        const moveX = e.clientX - controls.lastX, moveY = e.clientY - controls.lastY;
+        controls.lastX = e.clientX; controls.lastY = e.clientY;
+        const right = new THREE.Vector3(); camera.getWorldDirection(right);
+        const up = new THREE.Vector3(0, 1, 0);
+        right.cross(up).normalize();
+        up.crossVectors(right, camera.getWorldDirection(new THREE.Vector3())).normalize();
+        const scale = controls.spherical.radius * 0.001;
+        controls.target.addScaledVector(right, -moveX * scale);
+        controls.target.addScaledVector(up, moveY * scale);
+        controls.update();
+    } else if (controls.rotating) {
+        const moveX = e.clientX - controls.lastX, moveY = e.clientY - controls.lastY;
+        controls.lastX = e.clientX; controls.lastY = e.clientY;
+        controls.spherical.theta += moveX * 0.005;
+        controls.spherical.phi = Math.max(0.1, Math.min(Math.PI-0.1, controls.spherical.phi - moveY * 0.005));
+        controls.update();
+    }
+});
+
+canvas.addEventListener('mouseup', e => { 
+    if (isRulerMode && e.button === 0 && !hasDragged) { 
+        commitRulerPoint(e); 
+        return; 
+    }
+    if (isDragging) { isDragging = false; dragStartGroup = null; potentialDrag = false; } 
+    else if (isPanning || controls.panning) { isPanning = false; controls.panning = false; } 
+    else if (e.button === 1) onMiddleClick(e); 
+    else if (e.button === 0 && !hasDragged) onLeftClick(e);
+    controls.rotating = false; potentialDrag = false;
+});
+
+canvas.addEventListener('contextmenu', e => { e.preventDefault(); if (MODE === 'advanced') rotateSelectedItem(); });
+canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    controls.spherical.radius *= (1 + e.deltaY * 0.001);
+    controls.spherical.radius = Math.max(100, Math.min(50000, controls.spherical.radius));
+    controls.update();
+}, { passive: false });
+
+// Touch events for mobile
+let touchStartDist = 0;
+let touchStartCenter = { x: 0, y: 0 };
+canvas.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+        touchStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        touchStartCenter = { x: (e.touches[0].clientX + e.touches[1].clientX)/2, y: (e.touches[0].clientY + e.touches[1].clientY)/2 };
+    } else if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousedown', { clientX: touch.clientX, clientY: touch.clientY, button: 0 });
+        canvas.dispatchEvent(mouseEvent);
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        const scale = touchStartDist / dist;
+        controls.spherical.radius *= scale;
+        controls.spherical.radius = Math.max(100, Math.min(50000, controls.spherical.radius));
+        
+        const centerX = (e.touches[0].clientX + e.touches[1].clientX)/2;
+        const centerY = (e.touches[0].clientY + e.touches[1].clientY)/2;
+        const moveX = centerX - touchStartCenter.x;
+        const moveY = centerY - touchStartCenter.y;
+        
+        const right = new THREE.Vector3(); camera.getWorldDirection(right);
+        const up = new THREE.Vector3(0, 1, 0);
+        right.cross(up).normalize();
+        up.crossVectors(right, camera.getWorldDirection(new THREE.Vector3())).normalize();
+        const scalePan = controls.spherical.radius * 0.001;
+        controls.target.addScaledVector(right, -moveX * scalePan);
+        controls.target.addScaledVector(up, moveY * scalePan);
+        
+        touchStartDist = dist;
+        touchStartCenter = { x: centerX, y: centerY };
+        controls.update();
+    } else if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousemove', { clientX: touch.clientX, clientY: touch.clientY });
+        canvas.dispatchEvent(mouseEvent);
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+    if (e.touches.length === 0) {
+        const mouseEvent = new MouseEvent('mouseup', { button: 0 });
+        canvas.dispatchEvent(mouseEvent);
+    }
+});
+
+function onLeftClick(e) {
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(getMouse(e), camera);
+    
+    // Сначала проверяем, не кликнули ли мы по линейке (для удаления)
+    const allObjects = [];
+    scene.traverse(o => { 
+        if (o.isMesh || o.isSprite || o.isLineSegments) allObjects.push(o); 
+    });
+    const hits = raycaster.intersectObjects(allObjects, false);
+    
+    if (hits.length > 0) {
+        const obj = hits[0].object;
+        // Если кликнули по линейке - удаляем её
+        if (obj.userData && obj.userData.isRuler) {
+            const id = obj.userData.rulerId;
+            const rulerIdx = activeRulers.findIndex(r => r.id === id);
+            if (rulerIdx !== -1) {
+                const ruler = activeRulers[rulerIdx];
+                rulerGroup.remove(ruler.lines);
+                rulerGroup.remove(ruler.sprite);
+                activeRulers.splice(rulerIdx, 1);
+                showFlash("Линейка удалена");
+            }
+            return; // Прерываем обычное выделение
+        }
+    }
+
+    // Обычная логика выделения
+    const meshes = [];
+    scene.traverse(o => { if (o.isMesh && findRootModelGroup(o)) meshes.push(o); });
+    const meshHits = raycaster.intersectObjects(meshes, false);
+    
+    if (!ctrlPressed) {
+        scene.traverse(o => { if (o.isMesh && o.material && o.material.emissive) o.material.emissive.setHex(o.userData.origEmissive || 0x000000); });
+        selectedMeshes = [];
+    }
+
+    if (meshHits.length > 0) {
+        const clickedMesh = meshHits[0].object;
+        const group = clickedMesh.parent;
+        const rootGroup = findRootModelGroup(group);
+        const meshesInGroup = [];
+        group.traverse(o => { if (o.isMesh) meshesInGroup.push(o); });
+        
+        if (ctrlPressed) selectedMeshes = selectedMeshes.concat(meshesInGroup);
+        else selectedMeshes = meshesInGroup;
+        
+        selectedMeshes.forEach(m => { if (m.material.emissive) m.material.emissive.setHex(HIGHLIGHT_COLOR); });
+        if (MODE === 'advanced' && rootGroup && rootGroup.userData.sceneItem) selectSceneItem(rootGroup.userData.sceneItem);
+        
+        const cat = clickedMesh.userData.paintCategory;
+        const matName = clickedMesh.userData.materialName || 'Неизвестно';
+        let catText = '';
+        if (cat === 'furniture') catText = '<span class="locked">🔒 Фурнитура</span>';
+        else if (cat === 'dvpo') catText = '<span class="locked">🔒 ДВПо</span>';
+        else if (cat === 'fanera') catText = '<span class="ok">✓ Фанера</span>';
+        else if (cat === 'ldsp') catText = '<span class="ok">✓ ЛДСП</span>';
+        else catText = cat;
+
+        document.getElementById('selectedInfo').innerHTML = `<b>${group.userData.name || 'Деталь'}</b><br>Материал: ${matName}<br>${catText}`;
+    } else if (!ctrlPressed) {
+        selectedMeshes = [];
+        document.getElementById('selectedInfo').textContent = 'Кликните по детали модели';
+    }
+}
+
+function onMiddleClick(e) {
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(getMouse(e), camera);
+    const meshes = [];
+    scene.traverse(o => { if (o.isMesh && findRootModelGroup(o)) meshes.push(o); });
+    const hits = raycaster.intersectObjects(meshes, false);
+    if (hits.length > 0) {
+        let animGroup = hits[0].object.parent;
+        while (animGroup && !animGroup.userData.animation && !animGroup.userData.isModel) animGroup = animGroup.parent;
+        if (animGroup && animGroup.userData.animation) toggleAnimation(animGroup.userData.animation, animGroup);
+    }
+}
+
+function snapToWallsAndItems(group) {
+    const box = new THREE.Box3().setFromObject(group);
+    const size = box.getSize(new THREE.Vector3());
+    const snapDist = 100;
+    if (box.min.x < 0) group.position.x += -box.min.x;
+    if (box.min.z < 0) group.position.z += -box.min.z;
+    if (Math.abs(box.min.x) < snapDist) group.position.x = 0;
+    if (Math.abs(box.min.z) < snapDist) group.position.z = 0;
+
+    sceneItems.forEach(other => {
+        if (other === selectedItem) return;
+        const otherGroup = scene.children.find(c => c.userData.sceneItem === other);
+        if (!otherGroup) return;
+        const otherBox = new THREE.Box3().setFromObject(otherGroup);
+        if (Math.abs(box.min.x - otherBox.max.x) < snapDist) group.position.x = otherBox.max.x;
+        if (Math.abs(box.max.x - otherBox.min.x) < snapDist) group.position.x = otherBox.min.x - size.x;
+        if (Math.abs(box.min.z - otherBox.max.z) < snapDist) group.position.z = otherBox.max.z;
+        if (Math.abs(box.max.z - otherBox.min.z) < snapDist) group.position.z = otherBox.min.z - size.z;
+        if (Math.abs(box.min.y - otherBox.max.y) < snapDist) {
+            const overlapX = Math.min(box.max.x, otherBox.max.x) - Math.max(box.min.x, otherBox.min.x);
+            const overlapZ = Math.min(box.max.z, otherBox.max.z) - Math.max(box.min.z, otherBox.min.z);
+            if (overlapX > 0 && overlapZ > 0) group.position.y = otherBox.max.y;
+        }
+    });
+}
+
+// ============================================================
+//  ПОКРАСКА (ТИХАЯ + ПРЕДУПРЕЖДЕНИЕ)
+// ============================================================
+function applyTexture(imagePath) {
+    let meshesToPaint = [];
+    const paintAll = document.getElementById('paintAllCheckbox').checked;
+
+    const rootGroups = new Set();
+    if (selectedItem) {
+        const rootGroup = scene.children.find(c => c.userData.sceneItem === selectedItem);
+        if (rootGroup) rootGroups.add(rootGroup);
+    }
+    if (rootGroups.size === 0 && selectedMeshes.length > 0) {
+        selectedMeshes.forEach(mesh => {
+            const rootGroup = findRootModelGroup(mesh);
+            if (rootGroup) rootGroups.add(rootGroup);
+        });
+    }
+    if (rootGroups.size === 0) {
+        scene.children.forEach(c => { if (c.userData.isModel) rootGroups.add(c); });
+    }
+
+    rootGroups.forEach(rootGroup => {
+        rootGroup.traverse(o => {
+            if (!o.isMesh || !o.userData.materialName) return;
+            const matName = o.userData.materialName;
+            const cat = o.userData.paintCategory;
+
+            if (cat === 'furniture' || cat === 'dvpo') return;
+
+            let canPaint = false;
+            let isSpecialMaterial = false;
+
+            if (matName.startsWith('Поролон')) {
+                if (currentTab === 'leather' || currentTab === 'fabric') { canPaint = true; isSpecialMaterial = true; }
+            } else if (matName.startsWith('Труба')) {
+                if (currentTab === 'metal') { canPaint = true; isSpecialMaterial = true; }
+            } else if (matName.startsWith('Столешница')) {
+                if (currentTab === 'countertop') { canPaint = true; isSpecialMaterial = true; }
+            } else if (cat === 'fanera' || matName.startsWith('Фанера')) {
+                if (currentTab === 'fanera') canPaint = true;
+            } else if (cat === 'ldsp' || matName.includes('ДСП')) {
+                if (currentTab === 'ldsp_standard' || currentTab === 'ldsp_fantasy') canPaint = true;
+            }
+
+            if (canPaint) {
+                if (isSpecialMaterial) {
+                    meshesToPaint.push(o);
+                } else {
+                    if (paintAll) {
+                        meshesToPaint.push(o);
+                    } else {
+                        if (selectedMeshes.includes(o)) meshesToPaint.push(o);
+                    }
+                }
+            }
+        });
+    });
+
+    meshesToPaint = [...new Set(meshesToPaint)];
+    
+    // ПРЕДУПРЕЖДЕНИЕ О НЕВЕРНОЙ КАТЕГОРИИ
+    if (meshesToPaint.length === 0) {
+        const hasSelection = selectedMeshes.length > 0 || selectedItem !== null;
+        if (hasSelection) {
+            showFlash("⚠️ Этот материал нельзя окрасить выбранной текстурой. Проверьте категорию!");
+        }
+        return;
+    }
+
+    meshesToPaint.forEach(mesh => {
+        loadTexture(imagePath).then(tex => {
+            mesh.material.map = tex;
+            mesh.material.color.setHex(0xffffff);
+            mesh.material.needsUpdate = true;
+        });
+    });
+
+    document.getElementById('paintAllCheckbox').checked = false;
+}
+
+document.getElementById('btnResetMat').onclick = () => {
+    let meshesToReset = [];
+    const rootGroups = new Set();
+    if (selectedItem) {
+        const rootGroup = scene.children.find(c => c.userData.sceneItem === selectedItem);
+        if (rootGroup) rootGroups.add(rootGroup);
+    }
+    selectedMeshes.forEach(mesh => {
+        const rootGroup = findRootModelGroup(mesh);
+        if (rootGroup) rootGroups.add(rootGroup);
+    });
+    rootGroups.forEach(rootGroup => { rootGroup.traverse(o => { if (o.isMesh) meshesToReset.push(o); }); });
+
+    if (meshesToReset.length === 0) return;
+
+    meshesToReset.forEach(mesh => {
+        const origColor = mesh.userData.origColor;
+        const origTexture = mesh.userData.origTexture;
+        if (origTexture) {
+            loadTexture(origTexture).then(tex => {
+                mesh.material.map = tex; mesh.material.color.setHex(0xffffff); mesh.material.needsUpdate = true;
+            }).catch(() =>
+</thinking>
+</think>
+
+Вот полностью обновленный и исправленный код. Я аккуратно внедрил все ваши пожелания, не сломав существующий функционал.
+
+**Что было исправлено и добавлено:**
+1. **Исправлен "Магнит" и коллизии:** Функция `resolveCollisions` переписана. Теперь она корректно выталкивает изделия друг из друга по оси наименьшего проникновения и добавляет микро-отступ (1 мм), чтобы объекты не "залипали" друг в друге.
+2. **Предупреждение о неверной категории:** Если вы пытаетесь накрасить деталь текстурой из неподходящей вкладки (например, тканью по ДСП), появится всплывающее сообщение: *"⚠️ Этот материал нельзя окрасить выбранной текстурой. Проверьте категорию!"*
+3. **Удаление линеек:** 
+   - Добавлена кнопка **"🗑️ Удалить все линейки"** на нижней панели (появляется при включении линейки).
+   - **Клик по самой линейке** (по тексту или линии) теперь удаляет именно эту конкретную линейку.
+4. **Подробная справка:** Модальное окно помощи значительно расширено. Добавлены подробные инструкции по использованию магнита, правилам окраски материалов и управлению линейками.
+
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>3D Конфигуратор</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, Segoe UI, sans-serif; overflow: hidden; background: #f0f0f0; color: #333; touch-action: none; }
+#canvas { display: block; width: 100vw; height: 100vh; background: #ffffff; cursor: default; }
+
+.panel {
+    position: absolute; background: rgba(255,255,255,0.95);
+    border: 1px solid #ddd; border-radius: 8px; padding: 12px;
+    backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+#topBar { top: 10px; left: 10px; right: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+#leftPanel { top: 60px; left: 10px; width: 260px; max-height: calc(100vh - 80px); overflow-y: auto; }
+#rightPanel { top: 60px; right: 10px; width: 280px; max-height: calc(100vh - 80px); overflow-y: auto; }
+#bottomBar { bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+button, label.btn, select, input[type="text"] {
+    background: #f5f5f5; color: #333; border: 1px solid #ccc;
+    padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+button:hover, label.btn:hover { background: #e0e0e0; }
+button.active { background: #4a7cff; color: #fff; border-color: #4a7cff; }
+button.danger { background: #ff4a4a; color: #fff; border-color: #ff4a4a; }
+
+h3 { font-size: 12px; margin-bottom: 8px; color: #4a7cff; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
+.section { margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+
+#searchInput { width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
+
+.texture-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-height: 350px; overflow-y: auto; }
+.texture-item {
+    aspect-ratio: 1; border-radius: 6px; cursor: pointer; border: 2px solid transparent;
+    background-color: #eee; background-size: cover; background-position: center; position: relative;
+    transition: transform 0.1s;
+}
+.texture-item:hover { transform: scale(1.05); border-color: #4a7cff; }
+.texture-item.selected { border-color: #4a7cff; box-shadow: 0 0 0 2px #4a7cff; }
+.texture-item span {
+    position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6);
+    color: #fff; font-size: 9px; padding: 2px 4px; text-align: center;
+    border-radius: 0 0 4px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.model-item { background: #f9f9f9; padding: 8px; border-radius: 6px; margin-bottom: 6px; cursor: pointer; font-size: 12px; border: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.model-item:hover { background: #eef4ff; border-color: #4a7cff; }
+.model-item.selected { border-color: #4a7cff; background: #e0ebff; font-weight: bold; }
+.model-item .remove-btn { 
+    color: #ff4a4a; cursor: pointer; font-size: 18px; padding: 4px 8px; 
+    border-radius: 4px; transition: background 0.2s; font-weight: bold;
+}
+.model-item .remove-btn:hover { background: #ffe0e0; }
+
+.tab-bar { display: flex; gap: 4px; margin-bottom: 4px; flex-wrap: wrap; }
+.tab-bar button { 
+    flex: 1 0 48%; 
+    padding: 8px 4px; 
+    font-size: 12px; 
+    line-height: 1.2; 
+    white-space: nowrap;
+    min-width: 0; 
+}
+.tab-bar button.full-width {
+    flex: 1 0 100%;
+}
+.tab-bar button.active { background: #4a7cff; color: #fff; }
+
+#selectedInfo { font-size: 12px; margin-bottom: 8px; padding: 8px; background: #f0f4ff; border-radius: 6px; border-left: 3px solid #4a7cff; }
+#selectedInfo .locked { color: #ff4a4a; font-weight: bold; }
+#selectedInfo .ok { color: #28a745; font-weight: bold; }
+
+#progressOverlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255,255,255,0.98); display: none; align-items: center; justify-content: center;
+    z-index: 10000; flex-direction: column;
+}
+#progressOverlay.show { display: flex; }
+#progressBar { width: 300px; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin-top: 16px; }
+#progressFill { height: 100%; background: #4a7cff; width: 0%; transition: width 0.2s; }
+#progressText { font-size: 18px; font-weight: bold; color: #4a7cff; }
+
+#roomModal, #saveModal, #helpModal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 10000;
+}
+#roomModal.show, #saveModal.show, #helpModal.show { display: flex; }
+.modal-content {
+    background: #fff; padding: 24px; border-radius: 12px; width: 420px; max-width: 90vw;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center;
+    z-index: 10001;
+}
+.modal-content.help-content {
+    width: 650px; text-align: left; max-height: 85vh; overflow-y: auto;
+}
+.modal-row { margin-bottom: 16px; text-align: left; }
+.modal-row label { display: block; font-size: 13px; margin-bottom: 6px; font-weight: bold; }
+.modal-row input[type="color"], .modal-row input[type="range"] { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 6px; }
+.wallpaper-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 200px; overflow-y: auto; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
+.wallpaper-item {
+    aspect-ratio: 1; border-radius: 4px; cursor: pointer; border: 2px solid transparent;
+    background-size: cover; background-position: center; transition: transform 0.1s;
+}
+.wallpaper-item:hover { transform: scale(1.05); }
+.wallpaper-item.selected { border-color: #4a7cff; }
+.wallpaper-item.no-texture { background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #666; }
+
+#flash {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(255, 80, 80, 0.95); color: #fff; padding: 12px 24px; border-radius: 8px;
+    font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 10000;
+    text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-top: 8px; cursor: pointer; }
+.checkbox-label input { cursor: pointer; }
+
+#savePreview { max-width: 100%; max-height: 60vh; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 16px; background: #fff; }
+
+.help-section { margin-bottom: 16px; }
+.help-section h4 { color: #4a7cff; margin-bottom: 6px; font-size: 14px; }
+.help-section ul { padding-left: 20px; font-size: 13px; line-height: 1.6; color: #444; }
+.help-section li { margin-bottom: 6px; }
+.help-section b { color: #222; }
+
+@media (max-width: 768px) {
+    #rightPanel, #leftPanel { width: 90vw; left: 5vw; right: 5vw; }
+    #rightPanel { top: auto; bottom: 80px; max-height: 50vh; }
+    #leftPanel { top: 60px; max-height: 40vh; }
+    .tab-bar button { font-size: 11px; padding: 6px 2px; }
+    .modal-content.help-content { width: 95vw; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="progressOverlay">
+    <div id="progressText">0%</div>
+    <div id="progressBar"><div id="progressFill"></div></div>
+</div>
+
+<div id="topBar" class="panel">
+    <button id="modeSimple" class="active"> Обычный</button>
+    <button id="modeAdvanced">🏗️ Расширенный</button>
+    <button id="btnSaveImage" style="background: #28a745; color: #fff; border-color: #28a745;">💾 Сохранить изображение</button>
+    <button id="btnHelp">❓ Помощь</button>
+    <span id="status" style="margin-left:auto; font-size:12px; color:#666;">Загрузка...</span>
+</div>
+
+<div id="leftPanel" class="panel">
+    <div class="section">
+        <h3> Каталог моделей</h3>
+        <input type="text" id="searchInput" placeholder="Поиск...">
+        <div id="catalogList" style="max-height: 400px; overflow-y: auto;">
+            <div style="font-size:12px; color:#888; padding:8px;">Загрузка...</div>
+        </div>
+    </div>
+    <div class="section" id="sceneSection" style="display:none">
+        <h3>🎬 На сцене</h3>
+        <div id="sceneList" style="max-height: 200px; overflow-y: auto;"></div>
+    </div>
+</div>
+
+<div id="rightPanel" class="panel">
+    <div class="section">
+        <h3>🎨 Изменить цвет</h3>
+        <div id="selectedInfo">Кликните по детали модели</div>
+        <label class="checkbox-label">
+            <input type="checkbox" id="paintAllCheckbox">
+            <span>Окрашивать всю модель</span>
+        </label>
+        
+        <div class="tab-bar" style="margin-top:8px;">
+            <button id="tabLdsp" class="active">Цвет ЛДСП</button>
+            <button id="tabFanera">Цвет Фанеры</button>
+            <button id="tabCountertop">Цвет Столешниц</button>
+            <button id="tabSoft">Цвет Мягкой</button>
+            <button id="tabMetal" class="full-width">Цвет Металлокаркаса</button>
+        </div>
+        
+        <div id="subTabLdsp" class="tab-bar" style="margin-top: 4px; border-top: 1px solid #ddd; padding-top: 8px;">
+            <button id="tabLdspStandard" class="active">Стандартные</button>
+            <button id="tabLdspFantasy">Фантазийные</button>
+        </div>
+        
+        <div id="subTabSoft" class="tab-bar" style="margin-top: 4px; border-top: 1px solid #ddd; padding-top: 8px; display: none;">
+            <button id="tabLeather" class="active">Кожзам</button>
+            <button id="tabFabric">Ткань</button>
+        </div>
+        
+        <div class="texture-grid" id="textureGrid"></div>
+        <button id="btnResetMat" style="width:100%; margin-top:12px;">↩️ Вернуть материал</button>
+        
+        <label class="checkbox-label" style="margin-top: 12px;">
+            <input type="checkbox" id="showDimensionsCheckbox">
+            <span>Показать габаритные размеры</span>
+        </label>
+    </div>
+    <div class="section" id="transformSection" style="display:none">
+        <h3>📐 Высота</h3>
+        <div style="margin-bottom:8px;">
+            <label style="font-size:11px;">Высота от пола (Y): <input type="number" id="posY" step="10" min="0" style="width:100%"></label>
+        </div>
+    </div>
+</div>
+
+<div id="bottomBar" class="panel">
+    <button id="btnMagnet" class="active" style="display:none;">🧲 Магнит</button>
+    <button id="btnRoomSettings" style="display:none;">🏠 Комната</button>
+    <button id="btnRuler" style="display:none;">📏 Линейка</button>
+    <button id="btnClearRulers" class="danger" style="display:none;">🗑️ Удалить все линейки</button>
+    <button id="btnClear" class="danger">🗑️ Очистить всё</button>
+</div>
+
+<div id="flash"></div>
+
+<div id="roomModal">
+    <div class="modal-content">
+        <h3 style="margin-bottom:16px; font-size:16px; text-align: left;">⚙️ Настройки комнаты</h3>
+        <div class="modal-row">
+            <label>Цвет пола</label>
+            <input type="color" id="floorColor" value="#cccccc">
+        </div>
+        <div class="modal-row">
+            <label>Текстура стен (Обои)</label>
+            <div class="wallpaper-grid" id="wallpaperGrid">
+                <div class="wallpaper-item no-texture selected" data-value="">Сплошной цвет</div>
+            </div>
+        </div>
+        <div class="modal-row">
+            <label>Цвет стен (если без текстуры)</label>
+            <input type="color" id="wallColor" value="#f0f0f0">
+        </div>
+        <div class="modal-row">
+            <label>Яркость освещения: <span id="lightValue">85%</span></label>
+            <input type="range" id="lightIntensity" min="50" max="200" value="85">
+        </div>
+        <div style="display:flex; gap:8px; margin-top:24px;">
+            <button id="btnApplyRoom" style="flex:1; background:#4a7cff; color:#fff;">Применить</button>
+            <button id="btnCloseRoom" style="flex:1;">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<div id="saveModal">
+    <div class="modal-content">
+        <h3 style="margin-bottom: 16px; font-size: 16px;">Сохранить изображение</h3>
+        <img id="savePreview" src="" alt="Предпросмотр">
+        <div style="display: flex; gap: 8px; justify-content: center;">
+            <button id="btnDownloadImage" style="background: #28a745; color: #fff; border-color: #28a745;">Скачать PNG</button>
+            <button id="btnCloseSave" style="background: #f5f5f5;">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<div id="helpModal">
+    <div class="modal-content help-content">
+        <h3 style="margin-bottom:16px; font-size:18px; text-align: center; color: #4a7cff;">📖 Подробная справка по программе</h3>
+        
+        <div class="help-section">
+            <h4>🖱️ Управление камерой</h4>
+            <ul>
+                <li><b>Левая кнопка мыши (ЛКМ):</b> Вращение модели вокруг центра.</li>
+                <li><b>Правая кнопка мыши (ПКМ):</b> Панорамирование (сдвиг камеры).</li>
+                <li><b>Колесико мыши:</b> Приближение и удаление (Zoom).</li>
+                <li><b>На мобильном устройстве:</b> Один палец — вращение, два пальца — масштабирование и сдвиг.</li>
+                <li><b>Двойной клик</b> по детали скрывает её.</li>
+            </ul>
+        </div>
+
+        <div class="help-section">
+            <h4>🎨 Окрашивание материалов</h4>
+            <ul>
+                <li>Кликните по детали, чтобы выбрать её (она подсветится).</li>
+                <li>Выберите нужную <b>вкладку материала</b> (ЛДСП, Фанера, Столешницы и т.д.).</li>
+                <li>Кликните по текстуре, чтобы применить её.</li>
+                <li><b>Важно:</b> Если вы видите предупреждение <i>"Этот материал нельзя окрасить выбранной текстурой"</i>, значит, вы пытаетесь накрасить, например, ткань на ДСП. Переключитесь на правильную вкладку.</li>
+                <li>Галочка <b>"Окрашивать всю модель"</b> применит цвет ко всем деталям выбранной категории в изделии.</li>
+                <li>Кнопка <b>"Вернуть материал"</b> сбрасывает цвет детали к заводскому.</li>
+            </ul>
+        </div>
+
+        <div class="help-section">
+            <h4>📏 Линейка и Габариты</h4>
+            <ul>
+                <li><b>Добавить линейку:</b> Нажмите кнопку "Линейка". 1-й клик — первая точка, 2-й клик — вторая точка, 3-й клик — направление выноски (просто кликните в нужном месте экрана).</li>
+                <li><b>Удалить линейку:</b> Кликните прямо по тексту или линии нужной размерной линии, чтобы удалить только её. Или нажмите кнопку <b>"Удалить все линейки"</b> на нижней панели.</li>
+                <li><b>Габариты:</b> Включите чекбокс "Показать габаритные размеры" в правой панели. Размеры (ШхВхГ) отобразятся по верхним граням изделия.</li>
+            </ul>
+        </div>
+
+        <div class="help-section">
+            <h4>🏗️ Расширенный режим и Магнит</h4>
+            <ul>
+                <li>Позволяет добавлять несколько изделий на сцену.</li>
+                <li><b>Перетаскивание:</b> Зажмите ЛКМ на изделии и тяните. Если включен <b>"Магнит"</b>, изделия будут "прилипать" к стенам и друг к другу, не пересекаясь.</li>
+                <li><b>ПКМ по изделию:</b> Поворот изделия на 90°.</li>
+                <li><b>Средний клик (нажатие на колесико):</b> Анимация (открытие/закрытие дверей и ящиков).</li>
+            </ul>
+        </div>
+
+        <button onclick="document.getElementById('helpModal').classList.remove('show')" style="width:100%; margin-top:16px; background:#4a7cff; color:#fff; border:none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: bold;">Понятно, закрыть</button>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ============================================================
+//  ДАННЫЕ ТЕКСТУР
+// ============================================================
+const standardTextures = [
+  {name:'Белый', image:'textures/belyy_6459_ultradecor.jpg'},
+  {name:'Берёза', image:'textures/bereza_1715_ultradecor.jpg'},
+  {name:'Бежевый льняной', image:'textures/bezhevyy_lnyanoy_m.328_ultradecor.jpg'},
+  {name:'Бук Бавария', image:'textures/buk_bavariya_0381_ultradecor_.jpg'},
+  {name:'Чёрный', image:'textures/chernyy_u2200m_extravert.jpg'},
+  {name:'Дуб Атланта', image:'textures/dub_atlanta_nordeco.jpg'},
+  {name:'Дуб Феррара', image:'textures/dub_ferrara_8921_ultradecor.jpg'},
+  {name:'Дуб коломенский молочный', image:'textures/dub_kolomenskiy_molochnyy_d.341_extravert_.jpg'},
+  {name:'Дуб млечный', image:'textures/dub_mlechnyy_nordeco.jpg'},
+  {name:'Дуб Шамони светлый', image:'textures/dub_shamoni_svetlyy_004_ultradecor.jpg'},
+  {name:'Дуб Сонома', image:'textures/dub_sonoma_3025_ultradecor.jpg'},
+  {name:'Клён', image:'textures/klen_0375_ultradecor.jpg'},
+  {name:'Ольха классическая', image:'textures/olkha_klassicheskaya.jpg'},
+  {name:'Орех Экко', image:'textures/orekh_ekko_9459_ultradecor.jpg'},
+  {name:'Орех Гварнери', image:'textures/orekh_gvarneri_9455_ultradecor.jpg'},
+  {name:'Орех Мария-Луиза', image:'textures/orekh_mariya_luiza_(italyanskiy)_9490_ultradecor.jpg'},
+  {name:'Венге Цаво', image:'textures/venge_tsavo_3354_ultradecor.jpg'},
+  {name:'Вишня Оксфорд', image:'textures/vishnya_oksford.jpg'},
+  {name:'Ясень Шимо светлый', image:'textures/yasen_shimo_svetlyy_3356_ultradecor.jpg'},
+  {name:'Ясень Шимо тёмный', image:'textures/yasen_shimo_temnyy_3357_ultradecor.jpg'},
+];
+
+const fantasyTextures = [
+  {name:'Лимонный сорбет', image:'textures/limonnyy_sorbet_7123_ultradecor.jpg'},
+  {name:'Песочный', image:'textures/pesochnyy_0515_ultradecor.jpg'},
+  {name:'Оранжевый цитрус', image:'textures/oranzhevyy_tsitrusovyy_m702_extravert.jpg'},
+  {name:'Розовый маревый', image:'textures/rozovyy_marevyy_m.705_extravert.jpg'},
+  {name:'Салатовый', image:'textures/salatovyy.jpg'},
+  {name:'Солнечный свет', image:'textures/solnechnyy_svet_0134_ultradecor.jpg'},
+  {name:'Лимонный', image:'textures/limonnyy_nordeco.jpg'},
+  {name:'Ирис', image:'textures/iris_lamarty.jpg'},
+  {name:'Зелёный лайм', image:'textures/zelenyy_laym_5519_ultradecor.jpg'},
+  {name:'Зелёный ивовый', image:'textures/zelyonyy_ivovyy_m607_extravert.jpg'},
+  {name:'Зелёный мятный', image:'textures/zelyonyy_myatnyy_m605_extravert.jpg'},
+  {name:'Зелёный оксид', image:'textures/zelyonyy_oksid_6561_ultradecor.jpg'},
+  {name:'Красный', image:'textures/krasnyy_0149_ultradecor.jpg'},
+  {name:'Королевский синий', image:'textures/korolevskiy_siniy_0125_ultradecor.jpg'},
+  {name:'Лазурный голубой', image:'textures/lazurnyy_goluboy_k517_ultradecor.jpg'},
+  {name:'Капри синий', image:'textures/kapri_siniy_0121_ultradecor.jpg'},
+  {name:'Лаванда', image:'textures/lavanda_u7501_uvadrev_.jpg'},
+  {name:'Аура', image:'textures/aura_lamarty.jpg'},
+];
+
+const paintTextures = [
+  {name:'Серый', image:'textures/S168.jpg'}, {name:'Бежевый', image:'textures/G100.jpg'},
+  {name:'Сиреневый', image:'textures/H148.jpg'}, {name:'Фиолетовый', image:'textures/K148.jpg'},
+  {name:'Небесно-голубой', image:'textures/V021.jpg'}, {name:'Салатовый', image:'textures/H050.jpg'},
+  {name:'Лимонный', image:'textures/G081.jpg'}, {name:'Желтый', image:'textures/L077.jpg'},
+  {name:'Оранжевый', image:'textures/L089.jpg'}, {name:'Розовый', image:'textures/H141.jpg'},
+  {name:'Зеленый', image:'textures/L052.jpg'}, {name:'Красный', image:'textures/L134.jpg'},
+  {name:'Синий', image:'textures/Y077.jpg'}, {name:'Голубой', image:'textures/K016.jpg'}
+];
+
+const leatherTextures = [
+  {name:'Бежевый 424/2', image:'textures/Bezhevyj_MM.jpg'}, {name:'Капучино 429/2', image:'textures/Kapuchino_MM.jpg'},
+  {name:'Серый 614/2', image:'textures/Seryj_MM.jpg'}, {name:'Пудровый 427/2', image:'textures/Pudovij.jpg'},
+  {name:'Бордовый 112/2/102', image:'textures/Bordovyj_MM.jpg'}, {name:'Графит 991/2', image:'textures/Grafit.jpg'},
+  {name:'Шоколад 307/2', image:'textures/Shokolad.jpg'}, {name:'Черный 900/2', image:'textures/Chernyj_MM.jpg'},
+  {name:'Белый 550/2', image:'textures/Belyj_MM.jpg'}, {name:'Синий 705/2', image:'textures/Sinij_MM.jpg'},
+  {name:'Красный 105/2', image:'textures/Krasnyj_MM.jpg'}, {name:'Желтый 415/2', image:'textures/Zheltyj_MM.jpg'},
+  {name:'Зеленый 86/2', image:'textures/Zelenyj_MM.jpg'}, {name:'Розовый 107/2', image:'textures/Rozovyj_MM.jpg'},
+  {name:'Салатовый 85/2', image:'textures/Salatovyj_MM.jpg'}, {name:'Сиреневый 710/2', image:'textures/Sirenevyj_MM.jpg'},
+  {name:'Малиновый', image:'textures/Malinovyj_MM.jpg'}, {name:'Фиолетовый 711/2', image:'textures/Fioletovyj_MM.jpg'},
+  {name:'Оранжевый 417/2', image:'textures/Oranzhevyj_MM.jpg'}, {name:'Голубой 707/2', image:'textures/Goluboj_MM.jpg'},
+  {name:'Оливковый 800/2', image:'textures/Olivkovyj_MM.jpg'}, {name:'Фисташковый 803/2', image:'textures/Fistashkovij.jpg'}
+];
+
+const fabricTextures = [
+  {name:'Kotofey 01', image:'textures/KOTOFEY_01.jpg'}, {name:'Kit cat', image:'textures/Kit-cat.jpg'},
+  {name:'Kosmopuziki', image:'textures/Kosmopuziki.jpg'}, {name:'Mashinki', image:'textures/Mashinki.jpg'},
+  {name:'Марконафт', image:'textures/Markonaft.jpg'}, {name:'Зефирка', image:'textures/Zefirka.jpg'},
+  {name:'Легого', image:'textures/Legogo.jpg'}, {name:'Мехико', image:'textures/Mexico.jpg'},
+  {name:'Мордашки', image:'textures/Mordashki.jpg'}, {name:'Шарики', image:'textures/Shariki.jpg'},
+  {name:'Xpoint 0011.01', image:'textures/Xpoint_0011.01.jpg'}, {name:'Xpoint 0037.01', image:'textures/Xpoint_0037.01.jpg'},
+  {name:'Xpoint 0037.02', image:'textures/Xpoint_0037.02.jpg'}, {name:'Xpoint 0051.01', image:'textures/Xpoint_0051.01.jpg'},
+  {name:'Карасики', image:'textures/Karasiki.jpg'}, {name:'Мишки', image:'textures/Mishki.jpg'},
+  {name:'Принцесски', image:'textures/Princesski.jpg'}, {name:'НЛО', image:'textures/NLO.jpg'},
+  {name:'Зебра 11', image:'textures/Zebra_11.jpg'}, {name:'Зебра 20', image:'textures/Zebra_20.jpg'},
+  {name:'Цирк', image:'textures/Cirk.jpg'}, {name:'Акробат 08', image:'textures/Akrobat_08.jpg'},
+  {name:'Акробат 10', image:'textures/Akrobat_10.jpg'}, {name:'Коты 01', image:'textures/Koty_01.jpg'},
+  {name:'Декор Xpoint 0004.01', image:'textures/Xpoint_0004.01.jpg'}, {name:'Декор Xpoint 0006.01', image:'textures/Xpoint_0006.01.jpg'},
+  {name:'Декор Xpoint 0007.01', image:'textures/Xpoint_0007.01.jpg'}, {name:'Декор Xpoint 0005.01', image:'textures/Xpoint_0005.01.jpg'},
+  {name:'Лион 305', image:'textures/Lion_305.jpg'}, {name:'Лион 306', image:'textures/Lion_306.jpg'},
+  {name:'Пони 01', image:'textures/Poni_01.jpg'}, {name:'Пони 03', image:'textures/Poni_03.jpg'},
+  {name:'Пони 04', image:'textures/Poni_04.jpg'}, {name:'Пони 05', image:'textures/Poni_05.jpg'},
+  {name:'Черный С11', image:'textures/Chernyj_S11.jpg'}, {name:'Серый С73', image:'textures/Seryj_S73.jpg'}
+];
+
+const metalTextures = [
+  {name:'Бежевый', image:'textures/Bezhevyj_MK.jpg'}, {name:'Белый', image:'textures/Belyj_MK.jpg'},
+  {name:'Черный', image:'textures/Chernyj_MK.jpg'}, {name:'Коричневый', image:'textures/Korichnevyj_MK.jpg'},
+  {name:'Серый', image:'textures/Seryj_MK.jpg'}, {name:'Металлик', image:'textures/Metallik_MK.jpg'},
+  {name:'Красный', image:'textures/Krasnyj_MK.jpg'}, {name:'Желтый', image:'textures/Zheltyj_MK.jpg'},
+  {name:'Синий', image:'textures/Sinij_MK.jpg'}, {name:'Зеленый', image:'textures/Zelenyj_MK.jpg'}
+];
+
+const countertopTextures = [
+  {name:'БЕЛЫЙ', image:'textures/10M.jpg'}, {name:'ОЛИВА', image:'textures/051M.jpg'},
+  {name:'ОНИКС БЕЖЕВЫЙ', image:'textures/100MA.jpg'}, {name:'ДУГЛАС СВЕТЛЫЙ', image:'textures/133M.jpg'},
+  {name:'КИАНИТ', image:'textures/4057M.jpg'}, {name:'МРАМОР ЛАЦИО БЕЛЫЙ', image:'textures/056AM.jpg'},
+  {name:'НЕБУЛА', image:'textures/3154M.jpg'}, {name:'КАНАДСКИЙ ДУБ', image:'textures/3230M.jpg'},
+  {name:'АЛАМБРА', image:'textures/4026M.jpg'}, {name:'СЕМОЛИНА СЕРАЯ', image:'textures/3043M.jpg'},
+  {name:'СЕМОЛИНА БЕЖЕВАЯ', image:'textures/Semolina_bezhevaya_3042M.jpg'}
+];
+
+let currentTab = 'ldsp_standard';
+
+// ============================================================
+//  THREE.JS СЦЕНА
+// ============================================================
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xffffff);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 50000);
+camera.position.set(2000, 1500, 2000);
+
+const controls = {
+    target: new THREE.Vector3(0, 0, 0), rotating: false, panning: false, lastX: 0, lastY: 0,
+    spherical: { radius: 3000, phi: Math.PI/3, theta: Math.PI/4 },
+    update() {
+        const s = this.spherical;
+        camera.position.set(
+            this.target.x + s.radius * Math.sin(s.phi) * Math.cos(s.theta),
+            this.target.y + s.radius * Math.cos(s.phi),
+            this.target.z + s.radius * Math.sin(s.phi) * Math.sin(s.theta)
+        );
+        camera.lookAt(this.target);
+    }
+};
+controls.update();
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(1500, 2000, 1000);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(2048, 2048);
+scene.add(dirLight);
+
+const floorMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.9 });
+const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), floorMat);
+floorMesh.rotation.x = -Math.PI/2;
+floorMesh.position.set(5000, 0, 5000);
+floorMesh.receiveShadow = true; floorMesh.name = "floor";
+scene.add(floorMesh);
+
+const wallThickness = 50;
+const wallHeight = 3000;
+const wallLength = 5000;
+const wallMat = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.9 });
+
+const wall1 = new THREE.Mesh(new THREE.BoxGeometry(wallLength, wallHeight, wallThickness), wallMat);
+wall1.position.set(wallLength/2, wallHeight/2, -wallThickness/2);
+wall1.receiveShadow = true; wall1.name = "wall1"; wall1.visible = false;
+scene.add(wall1);
+
+const wall2 = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, wallLength), wallMat);
+wall2.position.set(-wallThickness/2, wallHeight/2, wallLength/2);
+wall2.receiveShadow = true; wall2.name = "wall2"; wall2.visible = false;
+scene.add(wall2);
+
+// ============================================================
+//  СОСТОЯНИЕ
+// ============================================================
+let MODE = 'simple';
+let catalog = [];
+let sceneItems = [];
+let currentModelData = null;
+let selectedItem = null;
+let selectedMeshes = [];
+let magnetEnabled = true;
+let ctrlPressed = false;
+
+let isDragging = false;
+let isPanning = false;
+let potentialDrag = false;
+let dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+let dragOffset = new THREE.Vector3();
+let dragStartPos = new THREE.Vector2();
+let hasDragged = false;
+let dragStartGroup = null;
+
+const HIGHLIGHT_COLOR = 0xffaaaa;
+
+let lastAppliedRoom = {
+    floorColor: '#cccccc',
+    wallColor: '#f0f0f0',
+    wallTexture: '',
+    lightIntensity: 85
+};
+
+// ============================================================
+//  ПРОГРЕСС-БАР
+// ============================================================
+const progressOverlay = document.getElementById('progressOverlay');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+
+function showProgress(percent, text) {
+    progressOverlay.classList.add('show');
+    progressFill.style.width = percent + '%';
+    progressText.textContent = Math.round(percent) + '%';
+}
+
+function hideProgress() {
+    setTimeout(() => {
+        progressOverlay.classList.remove('show');
+        progressFill.style.width = '0%';
+    }, 500);
+}
+
+// ============================================================
+//  ЗАГРУЗКА КАТАЛОГА
+// ============================================================
+async function loadCatalog() {
+    try {
+        showProgress(5, 'Загрузка каталога...');
+        const response = await fetch('Models/catalog.json');
+        if (!response.ok) throw new Error('Нет catalog.json');
+        const list = await response.json();
+        
+        catalog = [];
+        for (let i = 0; i < list.length; i++) {
+            const item = list[i];
+            try {
+                showProgress(5 + ((i + 1) / list.length) * 90, `Загрузка: ${item.file}`);
+                const res = await fetch(`Models/${item.file}`);
+                const data = await res.json();
+                catalog.push({ name: data.meta.modelName || item.file.replace('.json', ''), data, file: item.file });
+            } catch (e) { console.error('Ошибка загрузки', item.file, e); }
+        }
+        
+        showProgress(100, 'Готово!');
+        document.getElementById('status').textContent = `Загружено: ${catalog.length} моделей`;
+        renderCatalog();
+        setTimeout(hideProgress, 800);
+    } catch (err) {
+        document.getElementById('status').innerHTML = `<span style="color:red">Ошибка: нужен файл Models/catalog.json</span>`;
+        hideProgress();
+    }
+}
+
+function renderCatalog(filter = '') {
+    const list = document.getElementById('catalogList');
+    list.innerHTML = '';
+    const filtered = catalog.filter(m => m.name.toLowerCase().includes(filter.toLowerCase()));
+    
+    filtered.forEach((m) => {
+        const div = document.createElement('div');
+        div.className = 'model-item';
+        div.textContent = m.name;
+        div.onclick = () => {
+            if (MODE === 'simple') {
+                loadSimpleModel(m.data);
+            } else {
+                addToScene(m.data);
+            }
+            document.querySelectorAll('#catalogList .model-item').forEach(el => el.classList.remove('selected'));
+            div.classList.add('selected');
+        };
+        list.appendChild(div);
+    });
+}
+
+document.getElementById('searchInput').addEventListener('input', (e) => renderCatalog(e.target.value));
+
+function loadSimpleModel(data) {
+    scene.children.slice().forEach(c => { if (c.userData.isModel) scene.remove(c); });
+    sceneItems = []; selectedItem = null; selectedMeshes = []; updateSceneList();
+    buildAndAddModel(data, new THREE.Vector3(0, 0, 0), 0, true);
+    focusCamera();
+}
+
+// ============================================================
+//  ПАРСИНГ И ДОБАВЛЕНИЕ МОДЕЛИ
+// ============================================================
+function unpackMesh(packed) {
+    const bytes = Uint8Array.from(atob(packed), c => c.charCodeAt(0));
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let off = 0;
+    const posLen = dv.getUint32(off, true); off += 4;
+    const pos = new Float32Array(posLen);
+    for (let i = 0; i < posLen; i++) { pos[i] = dv.getFloat32(off, true); off += 4; }
+    const norLen = dv.getUint32(off, true); off += 4;
+    const nor = new Float32Array(norLen);
+    for (let i = 0; i < norLen; i++) { nor[i] = dv.getFloat32(off, true); off += 4; }
+    const uvLen = dv.getUint32(off, true); off += 4;
+    const uvMin = dv.getFloat32(off, true); off += 4;
+    const uvRange = dv.getFloat32(off, true); off += 4;
+    let uv = null;
+    if (uvLen > 0) {
+        uv = new Float32Array(uvLen);
+        const uv16 = new Uint16Array(uvLen);
+        for (let i = 0; i < uvLen; i++) { uv16[i] = dv.getUint16(off, true); off += 2; }
+        for (let i = 0; i < uvLen; i++) uv[i] = uvMin + (uv16[i] / 65535) * uvRange;
+    }
+    return { pos, nor, uv };
+}
+
+function loadTexture(url) {
+    return new Promise((resolve, reject) => {
+        const loader = new THREE.TextureLoader();
+        loader.load(url, (tex) => {
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            resolve(tex);
+        }, undefined, reject);
+    });
+}
+
+async function buildAndAddModel(data, position, rotationY, isSimple) {
+    const materials = data.materials.map(m => {
+        let color = 0x888888; if (m.colorHex) color = parseInt(m.colorHex, 16);
+        return {
+            color, hasTexture: m.hasTexture, textureDataUrl: m.textureDataUrl,
+            name: m.name, opacity: m.opacity !== undefined ? m.opacity : 1.0,
+            paintCategory: m.paintCategory || 'ldsp',
+            loadedTexture: null
+        };
+    });
+
+    const texturePromises = [];
+    materials.forEach((mat, idx) => {
+        if (mat.hasTexture && mat.textureDataUrl) {
+            texturePromises.push(
+                loadTexture(mat.textureDataUrl).then(tex => {
+                    materials[idx].loadedTexture = tex;
+                }).catch(() => {
+                    materials[idx].hasTexture = false;
+                })
+            );
+        }
+    });
+    
+    await Promise.all(texturePromises);
+
+    const rootGroup = new THREE.Group();
+    rootGroup.userData.isModel = true;
+    rootGroup.userData.targetY = position.y;
+    
+    if (!isSimple) {
+        rootGroup.userData.sceneItem = {
+            id: Date.now() + Math.random(),
+            data: data,
+            materials: materials,
+            rotationY: rotationY,
+            position: position.clone(),
+            targetY: position.y
+        };
+        sceneItems.push(rootGroup.userData.sceneItem);
+        updateSceneList();
+    }
+
+    const groups = {};
+    for (const obj of data.objects) {
+        const group = new THREE.Group();
+        group.userData.uid = obj.uid;
+        group.userData.name = obj.name;
+        if (obj.position) group.position.set(obj.position.x, obj.position.y, obj.position.z);
+        if (obj.rotation) group.quaternion.set(obj.rotation.x, obj.rotation.y, obj.rotation.z, obj.rotation.w);
+        groups[obj.uid] = group;
+    }
+
+    for (const obj of data.objects) {
+        if (obj.parentUID && groups[obj.parentUID]) {
+            groups[obj.parentUID].add(groups[obj.uid]);
+        } else {
+            rootGroup.add(groups[obj.uid]);
+        }
+    }
+
+    for (const obj of data.objects) {
+        if (obj.animation) {
+            groups[obj.uid].userData.animation = {
+                ...obj.animation,
+                isOpen: false, currentAngle: 0, currentShift: 0,
+                origPosition: groups[obj.uid].position.clone(),
+                origQuaternion: groups[obj.uid].quaternion.clone()
+            };
+        }
+    }
+
+    for (const obj of data.objects) {
+        if (!obj.meshes) continue;
+        const group = groups[obj.uid];
+        
+        for (const m of obj.meshes) {
+            let pos, nor, uv;
+            if (m.packed) { const u = unpackMesh(m.packed); pos = u.pos; nor = u.nor; uv = u.uv; }
+            else { pos = new Float32Array(m.positions); nor = m.normals ? new Float32Array(m.normals) : null; uv = m.uvs ? new Float32Array(m.uvs) : null; }
+            
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            if (nor) geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); else geo.computeVertexNormals();
+            if (uv) geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+
+            const mat = materials[m.materialId];
+            let threeMat;
+            if (mat.hasTexture && mat.loadedTexture) {
+                threeMat = new THREE.MeshStandardMaterial({ map: mat.loadedTexture, roughness: 0.7, opacity: mat.opacity, transparent: mat.opacity < 1.0 });
+            } else {
+                threeMat = new THREE.MeshStandardMaterial({ color: mat.color, roughness: 0.7, metalness: 0.05, opacity: mat.opacity, transparent: mat.opacity < 1.0 });
+            }
+            const mesh = new THREE.Mesh(geo, threeMat);
+            mesh.castShadow = true; mesh.receiveShadow = true;
+            mesh.userData.parentGroup = group;
+            mesh.userData.materialId = m.materialId;
+            mesh.userData.paintCategory = mat.paintCategory;
+            mesh.userData.materialName = mat.name;
+            mesh.userData.origColor = mat.color;
+            mesh.userData.origTexture = mat.hasTexture ? mat.textureDataUrl : null;
+            mesh.userData.origEmissive = 0x000000;
+            group.add(mesh);
+        }
+    }
+
+    if (isSimple) {
+        rootGroup.position.set(0,0,0);
+    } else {
+        rootGroup.position.copy(position);
+        rootGroup.rotation.y = rotationY * Math.PI / 180;
+    }
+    scene.add(rootGroup);
+    return rootGroup;
+}
+
+// ============================================================
+//  РАСШИРЕННЫЙ РЕЖИМ
+// ============================================================
+function addToScene(data) {
+    let pos = new THREE.Vector3(0, 0, 500);
+    if (sceneItems.length > 0) {
+        const lastItem = sceneItems[sceneItems.length - 1];
+        const lastGroup = scene.children.find(c => c.userData.sceneItem === lastItem);
+        if (lastGroup) {
+            const box = new THREE.Box3().setFromObject(lastGroup);
+            pos.set(box.max.x + 100, 0, 0);
+        }
+    }
+    buildAndAddModel(data, pos, 0, false);
+    focusCamera();
+}
+
+function updateSceneList() {
+    const list = document.getElementById('sceneList');
+    list.innerHTML = '';
+    sceneItems.forEach((it, idx) => {
+        const div = document.createElement('div');
+        div.className = 'model-item' + (selectedItem === it ? ' selected' : '');
+        div.innerHTML = `<span style="flex:1;">${it.data.meta.modelName}</span><span class="remove-btn" onclick="removeItem(${idx}, event)" title="Удалить">️</span>`;
+        div.onclick = (e) => { if (!e.target.classList.contains('remove-btn')) selectSceneItem(it); };
+        list.appendChild(div);
+    });
+}
+window.removeItem = (idx, e) => {
+    e.stopPropagation();
+    const item = sceneItems[idx];
+    scene.children.slice().forEach(c => { if (c.userData.sceneItem === item) scene.remove(c); });
+    sceneItems.splice(idx, 1);
+    if (selectedItem === item) { 
+        selectedItem = null; 
+        selectedMeshes = []; 
+        document.getElementById('selectedInfo').textContent = 'Кликните по детали модели';
+    }
+    updateSceneList();
+};
+
+function selectSceneItem(item) {
+    selectedItem = item;
+    updateSceneList();
+    const group = scene.children.find(c => c.userData.sceneItem === item);
+    if (group) {
+        document.getElementById('posY').value = Math.round(group.userData.targetY || group.position.y);
+    }
+}
+
+document.getElementById('posY').addEventListener('change', e => {
+    if (!selectedItem) return;
+    const group = scene.children.find(c => c.userData.sceneItem === selectedItem);
+    if (group) {
+        let newY = parseFloat(e.target.value);
+        if (newY < 0) newY = 0;
+        group.position.y = newY;
+        group.userData.targetY = newY;
+        selectedItem.position.copy(group.position);
+        selectedItem.targetY = newY;
+        resolveCollisions(group);
+    }
+});
+
+function rotateSelectedItem() {
+    if (!selectedItem) {
+        return;
+    }
+    const group = scene.children.find(c => c.userData.sceneItem === selectedItem);
+    if (group) {
+        const box = new THREE.Box3().setFromObject(group);
+        const center = box.getCenter(new THREE.Vector3());
+        
+        const pivot = new THREE.Object3D();
+        pivot.position.copy(center);
+        scene.add(pivot);
+        
+        pivot.attach(group);
+        pivot.rotation.y += Math.PI / 2;
+        selectedItem.rotationY = ((selectedItem.rotationY || 0) + 90) % 360;
+        
+        scene.attach(group);
+        scene.remove(pivot);
+        
+        clampToWalls(group);
+        resolveCollisions(group);
+    }
+}
+
+function clampToWalls(group) {
+    const box = new THREE.Box3().setFromObject(group);
+    if (box.min.x < 0) group.position.x += -box.min.x;
+    if (box.min.z < 0) group.position.z += -box.min.z;
+}
+
+// ИСПРАВЛЕННЫЙ МАГНИТ И КОЛЛИЗИИ
+function resolveCollisions(group, maxIterations = 10) {
+    const box = new THREE.Box3().setFromObject(group);
+    for (let iter = 0; iter < maxIterations; iter++) {
+        let moved = false;
+        sceneItems.forEach(other => {
+            if (other === selectedItem) return;
+            const otherGroup = scene.children.find(c => c.userData.sceneItem === other);
+            if (!otherGroup) return;
+            const otherBox = new THREE.Box3().setFromObject(otherGroup);
+            
+            if (box.intersectsBox(otherBox)) {
+                const overlapX = Math.min(box.max.x, otherBox.max.x) - Math.max(box.min.x, otherBox.min.x);
+                const overlapY = Math.min(box.max.y, otherBox.max.y) - Math.max(box.min.y, otherBox.min.y);
+                const overlapZ = Math.min(box.max.z, otherBox.max.z) - Math.max(box.min.z, otherBox.min.z);
+                
+                // Выталкиваем по оси наименьшего проникновения + 1мм зазор, чтобы не залипало
+                if (overlapX <= overlapZ && overlapX <= overlapY) {
+                    group.position.x += (box.min.x < otherBox.min.x) ? -overlapX - 1 : overlapX + 1;
+                } else if (overlapZ <= overlapX && overlapZ <= overlapY) {
+                    group.position.z += (box.min.z < otherBox.min.z) ? -overlapZ - 1 : overlapZ + 1;
+                } else {
+                    group.position.y += (box.min.y < otherBox.min.y) ? -overlapY - 1 : overlapY + 1;
+                }
+                moved = true;
+                box.setFromObject(group); // Пересчитываем box для следующей итерации
+            }
+        });
+        if (!moved) break;
+    }
+    clampToWalls(group);
+    if (group.userData.sceneItem) group.userData.sceneItem.position.copy(group.position);
+}
+
+// ============================================================
+//  ВЗАИМОДЕЙСТВИЕ
+// ============================================================
+function getMouse(e) {
+    const rect = canvas.getBoundingClientRect();
+    return new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+}
+
+function findRootModelGroup(obj) {
+    let current = obj;
+    while (current) {
+        if (current.userData && current.userData.isModel) return current;
+        current = current.parent;
+    }
+    return null;
+}
+
+document.addEventListener('keydown', (e) => { if (e.key === 'Control') ctrlPressed = true; });
+document.addEventListener('keyup', (e) => { if (e.key === 'Control') ctrlPressed = false; });
+
+canvas.addEventListener('mousedown', e => {
+    if (isRulerMode) {
+        hasDragged = false;
+        return;
+    }
+    dragStartPos.set(e.clientX, e.clientY);
+    hasDragged = false;
+    dragStartGroup = null;
+    potentialDrag = false;
+    
+    if (e.button === 0) {
+        if (e.altKey) {
+            isPanning = true; controls.rotating = false; controls.lastX = e.clientX; controls.lastY = e.clientY; return;
+        }
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(getMouse(e), camera);
+        const meshes = [];
+        scene.traverse(o => { if (o.isMesh && findRootModelGroup(o)) meshes.push(o); });
+        const hits = raycaster.intersectObjects(meshes, false);
+        
+        if (hits.length > 0) {
+            const rootGroup = findRootModelGroup(hits[0].object);
+            if (MODE === 'advanced' && rootGroup && rootGroup.userData.sceneItem) {
+                potentialDrag = true; dragStartGroup = rootGroup; controls.rotating = false;
+                dragOffset.copy(hits[0].point).sub(rootGroup.position);
+            }
+        } else {
+            controls.rotating = true;
+        }
+    }
+    if (e.button === 2) controls.panning = true;
+    controls.lastX = e.clientX; controls.lastY = e.clientY;
+});
+
+canvas.addEventListener('mousemove', e => {
+    if (isRulerMode) {
+        updateRulerPreview(e);
+        return;
+    }
+    const dist = Math.sqrt((e.clientX - dragStartPos.x)**2 + (e.clientY - dragStartPos.y)**2);
+    if (dist > 5 && potentialDrag && !isDragging) { isDragging = true; hasDragged = true; controls.rotating = false; }
+    if (dist > 5) hasDragged = true;
+    
+    if (isDragging && dragStartGroup) {
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(getMouse(e), camera);
+        const target = new THREE.Vector3();
+        if (raycaster.ray.intersectPlane(dragPlane, target)) {
+            dragStartGroup.position.copy(target).sub(dragOffset);
+            dragStartGroup.position.y = dragStartGroup.userData.targetY || 0;
+            if (magnetEnabled) snapToWallsAndItems(dragStartGroup);
+            else clampToWalls(dragStartGroup);
+            if (dragStartGroup.userData.sceneItem) dragStartGroup.userData.sceneItem.position.copy(dragStartGroup.position);
+        }
+    } else if (isPanning || controls.panning) {
+        const moveX = e.clientX - controls.lastX, moveY = e.clientY - controls.lastY;
+        controls.lastX = e.clientX; controls.lastY = e.clientY;
+        const right = new THREE.Vector3(); camera.getWorldDirection(right);
+        const up = new THREE.Vector3(0, 1, 0);
+        right.cross(up).normalize();
+        up.crossVectors(right, camera.getWorldDirection(new THREE.Vector3())).normalize();
+        const scale = controls.spherical.radius * 0.001;
+        controls.target.addScaledVector(right, -moveX * scale);
+        controls.target.addScaledVector(up, moveY * scale);
+        controls.update();
+    } else if (controls.rotating) {
+        const moveX = e.clientX - controls.lastX, moveY = e.clientY - controls.lastY;
+        controls.lastX = e.clientX; controls.lastY = e.clientY;
+        controls.spherical.theta += moveX * 0.005;
+        controls.spherical.phi = Math.max(0.1, Math.min(Math.PI-0.1, controls.spherical.phi - moveY * 0.005));
+        controls.update();
+    }
+});
+
+canvas.addEventListener('mouseup', e => { 
+    if (isRulerMode && e.button === 0 && !hasDragged) { 
+        commitRulerPoint(e); 
+        return; 
+    }
+    if (isDragging) { isDragging = false; dragStartGroup = null; potentialDrag = false; } 
+    else if (isPanning || controls.panning) { isPanning = false; controls.panning = false; } 
+    else if (e.button === 1) onMiddleClick(e); 
+    else if (e.button === 0 && !hasDragged) onLeftClick(e);
+    controls.rotating = false; potentialDrag = false;
+});
+
+canvas.addEventListener('contextmenu', e => { e.preventDefault(); if (MODE === 'advanced') rotateSelectedItem(); });
+canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    controls.spherical.radius *= (1 + e.deltaY * 0.001);
+    controls.spherical.radius = Math.max(100, Math.min(50000, controls.spherical.radius));
+    controls.update();
+}, { passive: false });
+
+// Touch events for mobile
+let touchStartDist = 0;
+let touchStartCenter = { x: 0, y: 0 };
+canvas.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+        touchStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        touchStartCenter = { x: (e.touches[0].clientX + e.touches[1].clientX)/2, y: (e.touches[0].clientY + e.touches[1].clientY)/2 };
+    } else if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousedown', { clientX: touch.clientX, clientY: touch.clientY, button: 0 });
+        canvas.dispatchEvent(mouseEvent);
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        const scale = touchStartDist / dist;
+        controls.spherical.radius *= scale;
+        controls.spherical.radius = Math.max(100, Math.min(50000, controls.spherical.radius));
+        
+        const centerX = (e.touches[0].clientX + e.touches[1].clientX)/2;
+        const centerY = (e.touches[0].clientY + e.touches[1].clientY)/2;
+        const moveX = centerX - touchStartCenter.x;
+        const moveY = centerY - touchStartCenter.y;
+        
+        const right = new THREE.Vector3(); camera.getWorldDirection(right);
+        const up = new THREE.Vector3(0, 1, 0);
+        right.cross(up).normalize();
+        up.crossVectors(right, camera.getWorldDirection(new THREE.Vector3())).normalize();
+        const scalePan = controls.spherical.radius * 0.001;
+        controls.target.addScaledVector(right, -moveX * scalePan);
+        controls.target.addScaledVector(up, moveY * scalePan);
+        
+        touchStartDist = dist;
+        touchStartCenter = { x: centerX, y: centerY };
+        controls.update();
+    } else if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousemove', { clientX: touch.clientX, clientY: touch.clientY });
+        canvas.dispatchEvent(mouseEvent);
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+    if (e.touches.length === 0) {
+        const mouseEvent = new MouseEvent('mouseup', { button: 0 });
+        canvas.dispatchEvent(mouseEvent);
+    }
+});
+
+function onLeftClick(e) {
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(getMouse(e), camera);
+    
+    // Сначала проверяем, не кликнули ли мы по линейке (для удаления)
+    const allObjects = [];
+    scene.traverse(o => { 
+        if (o.isMesh || o.isSprite || o.isLineSegments) allObjects.push(o); 
+    });
+    const hits = raycaster.intersectObjects(allObjects, false);
+    
+    if (hits.length > 0) {
+        const obj = hits[0].object;
+        // Если кликнули по линейке - удаляем её
+        if (obj.userData && obj.userData.isRuler) {
+            const id = obj.userData.rulerId;
+            const rulerIdx = activeRulers.findIndex(r => r.id === id);
+            if (rulerIdx !== -1) {
+                const ruler = activeRulers[rulerIdx];
+                rulerGroup.remove(ruler.lines);
+                rulerGroup.remove(ruler.sprite);
+                activeRulers.splice(rulerIdx, 1);
+                showFlash("Линейка удалена");
+            }
+            return; // Прерываем обычное выделение
+        }
+    }
+
+    // Обычная логика выделения
+    const meshes = [];
+    scene.traverse(o => { if (o.isMesh && findRootModelGroup(o)) meshes.push(o); });
+    const meshHits = raycaster.intersectObjects(meshes, false);
+    
+    if (!ctrlPressed) {
+        scene.traverse(o => { if (o.isMesh && o.material && o.material.emissive) o.material.emissive.setHex(o.userData.origEmissive || 0x000000); });
+        selectedMeshes = [];
+    }
+
+    if (meshHits.length > 0) {
+        const clickedMesh = meshHits[0].object;
+        const group = clickedMesh.parent;
+        const rootGroup = findRootModelGroup(group);
+        const meshesInGroup = [];
+        group.traverse(o => { if (o.isMesh) meshesInGroup.push(o); });
+        
+        if (ctrlPressed) selectedMeshes = selectedMeshes.concat(meshesInGroup);
+        else selectedMeshes = meshesInGroup;
+        
+        selectedMeshes.forEach(m => { if (m.material.emissive) m.material.emissive.setHex(HIGHLIGHT_COLOR); });
+        if (MODE === 'advanced' && rootGroup && rootGroup.userData.sceneItem) selectSceneItem(rootGroup.userData.sceneItem);
+        
+        const cat = clickedMesh.userData.paintCategory;
+        const matName = clickedMesh.userData.materialName || 'Неизвестно';
+        let catText = '';
+        if (cat === 'furniture') catText = '<span class="locked">🔒 Фурнитура</span>';
+        else if (cat === 'dvpo') catText = '<span class="locked">🔒 ДВПо</span>';
+        else if (cat === 'fanera') catText = '<span class="ok">✓ Фанера</span>';
+        else if (cat === 'ldsp') catText = '<span class="ok">✓ ЛДСП</span>';
+        else catText = cat;
+
+        document.getElementById('selectedInfo').innerHTML = `<b>${group.userData.name || 'Деталь'}</b><br>Материал: ${matName}<br>${catText}`;
+    } else if (!ctrlPressed) {
+        selectedMeshes = [];
+        document.getElementById('selectedInfo').textContent = 'Кликните по детали модели';
+    }
+}
+
+function onMiddleClick(e) {
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(getMouse(e), camera);
+    const meshes = [];
+    scene.traverse(o => { if (o.isMesh && findRootModelGroup(o)) meshes.push(o); });
+    const hits = raycaster.intersectObjects(meshes, false);
+    if (hits.length > 0) {
+        let animGroup = hits[0].object.parent;
+        while (animGroup && !animGroup.userData.animation && !animGroup.userData.isModel) animGroup = animGroup.parent;
+        if (animGroup && animGroup.userData.animation) toggleAnimation(animGroup.userData.animation, animGroup);
+    }
+}
+
+function snapToWallsAndItems(group) {
+    const box = new THREE.Box3().setFromObject(group);
+    const size = box.getSize(new THREE.Vector3());
+    const snapDist = 100;
+    if (box.min.x < 0) group.position.x += -box.min.x;
+    if (box.min.z < 0) group.position.z += -box.min.z;
+    if (Math.abs(box.min.x) < snapDist) group.position.x = 0;
+    if (Math.abs(box.min.z) < snapDist) group.position.z = 0;
+
+    sceneItems.forEach(other => {
+        if (other === selectedItem) return;
+        const otherGroup = scene.children.find(c => c.userData.sceneItem === other);
+        if (!otherGroup) return;
+        const otherBox = new THREE.Box3().setFromObject(otherGroup);
+        if (Math.abs(box.min.x - otherBox.max.x) < snapDist) group.position.x = otherBox.max.x;
+        if (Math.abs(box.max.x - otherBox.min.x) < snapDist) group.position.x = otherBox.min.x - size.x;
+        if (Math.abs(box.min.z - otherBox.max.z) < snapDist) group.position.z = otherBox.max.z;
+        if (Math.abs(box.max.z - otherBox.min.z) < snapDist) group.position.z = otherBox.min.z - size.z;
+        if (Math.abs(box.min.y - otherBox.max.y) < snapDist) {
+            const overlapX = Math.min(box.max.x, otherBox.max.x) - Math.max(box.min.x, otherBox.min.x);
+            const overlapZ = Math.min(box.max.z, otherBox.max.z) - Math.max(box.min.z, otherBox.min.z);
+            if (overlapX > 0 && overlapZ > 0) group.position.y = otherBox.max.y;
+        }
+    });
+}
+
+// ============================================================
+//  ПОКРАСКА (ТИХАЯ + ПРЕДУПРЕЖДЕНИЕ)
+// ============================================================
+function applyTexture(imagePath) {
+    let meshesToPaint = [];
+    const paintAll = document.getElementById('paintAllCheckbox').checked;
+
+    const rootGroups = new Set();
+    if (selectedItem) {
+        const rootGroup = scene.children.find(c => c.userData.sceneItem === selectedItem);
+        if (rootGroup) rootGroups.add(rootGroup);
+    }
+    if (rootGroups.size === 0 && selectedMeshes.length > 0) {
+        selectedMeshes.forEach(mesh => {
+            const rootGroup = findRootModelGroup(mesh);
+            if (rootGroup) rootGroups.add(rootGroup);
+        });
+    }
+    if (rootGroups.size === 0) {
+        scene.children.forEach(c => { if (c.userData.isModel) rootGroups.add(c); });
+    }
+
+    rootGroups.forEach(rootGroup => {
+        rootGroup.traverse(o => {
+            if (!o.isMesh || !o.userData.materialName) return;
+            const matName = o.userData.materialName;
+            const cat = o.userData.paintCategory;
+
+            if (cat === 'furniture' || cat === 'dvpo') return;
+
+            let canPaint = false;
+            let isSpecialMaterial = false;
+
+            if (matName.startsWith('Поролон')) {
+                if (currentTab === 'leather' || currentTab === 'fabric') { canPaint = true; isSpecialMaterial = true; }
+            } else if (matName.startsWith('Труба')) {
+                if (currentTab === 'metal') { canPaint = true; isSpecialMaterial = true; }
+            } else if (matName.startsWith('Столешница')) {
+                if (currentTab === 'countertop') { canPaint = true; isSpecialMaterial = true; }
+            } else if (cat === 'fanera' || matName.startsWith('Фанера')) {
+                if (currentTab === 'fanera') canPaint = true;
+            } else if (cat === 'ldsp' || matName.includes('ДСП')) {
+                if (currentTab === 'ldsp_standard' || currentTab === 'ldsp_fantasy') canPaint = true;
+            }
+
+            if (canPaint) {
+                if (isSpecialMaterial) {
+                    meshesToPaint.push(o);
+                } else {
+                    if (paintAll) {
+                        meshesToPaint.push(o);
+                    } else {
+                        if (selectedMeshes.includes(o)) meshesToPaint.push(o);
+                    }
+                }
+            }
+        });
+    });
+
+    meshesToPaint = [...new Set(meshesToPaint)];
+    
+    // ПРЕДУПРЕЖДЕНИЕ О НЕВЕРНОЙ КАТЕГОРИИ
+    if (meshesToPaint.length === 0) {
+        const hasSelection = selectedMeshes.length > 0 || selectedItem !== null;
+        if (hasSelection) {
+            showFlash("⚠️ Этот материал нельзя окрасить выбранной текстурой. Проверьте категорию!");
+        }
+        return;
+    }
+
+    meshesToPaint.forEach(mesh => {
+        loadTexture(imagePath).then(tex => {
+            mesh.material.map = tex;
+            mesh.material.color.setHex(0xffffff);
+            mesh.material.needsUpdate = true;
+        });
+    });
+
+    document.getElementById('paintAllCheckbox').checked = false;
+}
+
+document.getElementById('btnResetMat').onclick = () => {
+    let meshesToReset = [];
+    const rootGroups = new Set();
+    if (selectedItem) {
+        const rootGroup = scene.children.find(c => c.userData.sceneItem === selectedItem);
+        if (rootGroup) rootGroups.add(rootGroup);
+    }
+    selectedMeshes.forEach(mesh => {
+        const rootGroup = findRootModelGroup(mesh);
+        if (rootGroup) rootGroups.add(rootGroup);
+    });
+    rootGroups.forEach(rootGroup => { rootGroup.traverse(o => { if (o.isMesh) meshesToReset.push(o); }); });
+
+    if (meshesToReset.length === 0) return;
+
+    meshesToReset.forEach(mesh => {
+        const origColor = mesh.userData.origColor;
+        const origTexture = mesh.userData.origTexture;
+        if (origTexture) {
+            loadTexture(origTexture).then(tex => {
+                mesh.material.map = tex; mesh.material.color.setHex(0xffffff); mesh.material.needsUpdate = true;
+            }).catch(() => {
+                mesh.material.map = null; mesh.material.color.setHex(origColor); mesh.material.needsUpdate = true;
+            });
+        } else {
+            mesh.material.map = null; mesh.material.color.setHex(origColor); mesh.material.needsUpdate = true;
+        }
+    });
+    document.getElementById('paintAllCheckbox').checked = false;
+};
+
+// ============================================================
+//  АНИМАЦИЯ
+// ============================================================
+function toggleAnimation(animData, group) {
+    animData.isOpen = !animData.isOpen;
+    let targetAngle = 0, targetShift = 0, shiftAxis = 'z';
+    if (animData.isOpen) {
+        if (animData.type === 1) targetAngle = animData.doorAngle || 90;
+        else if (animData.type === 2) { targetShift = animData.distance || animData.doorShift || 300; shiftAxis = 'z'; }
+        else if (animData.type === 5) { targetShift = animData.distance || animData.doorShift || 300; shiftAxis = 'x'; if (animData.openDir === 'left') targetShift = -targetShift; }
+    }
+    const startTime = performance.now();
+    const duration = animData.duration && animData.duration > 100 ? animData.duration : 600;
+    const startAngle = animData.currentAngle;
+    const startShift = animData.currentShift;
+
+    function animateStep() {
+        const now = performance.now();
+        let t = Math.min((now - startTime) / duration, 1);
+        const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        const angle = startAngle + (targetAngle - startAngle) * eased;
+        const shift = startShift + (targetShift - startShift) * eased;
+        group.position.copy(animData.origPosition);
+        group.quaternion.copy(animData.origQuaternion);
+
+        if (animData.type === 1) {
+            const axisStart = new THREE.Vector3(animData.axisStart.x, animData.axisStart.y, animData.axisStart.z);
+            const axisEnd = new THREE.Vector3(animData.axisEnd.x, animData.axisEnd.y, animData.axisEnd.z);
+            const axis = new THREE.Vector3().subVectors(axisEnd, axisStart).normalize();
+            const rotQ = new THREE.Quaternion().setFromAxisAngle(axis, angle * Math.PI / 180);
+            const offset = new THREE.Vector3().subVectors(group.position, axisStart);
+            offset.applyQuaternion(rotQ);
+            group.position.copy(axisStart).add(offset);
+            group.quaternion.premultiply(rotQ);
+        } else {
+            const dir = new THREE.Vector3(0, 0, 0);
+            if (shiftAxis === 'x') dir.set(1, 0, 0);
+            else if (shiftAxis === 'y') dir.set(0, 1, 0);
+            else dir.set(0, 0, 1);
+            dir.applyQuaternion(animData.origQuaternion);
+            group.position.addScaledVector(dir, shift);
+        }
+        if (t < 1) {
+            animData.currentAngle = angle; animData.currentShift = shift;
+            requestAnimationFrame(animateStep);
+        } else {
+            animData.currentAngle = targetAngle; animData.currentShift = targetShift;
+        }
+    }
+    requestAnimationFrame(animateStep);
+}
+
+// ============================================================
+//  УПРАВЛЕНИЕ РЕЖИМАМИ
+// ============================================================
+document.getElementById('modeSimple').onclick = () => setMode('simple');
+document.getElementById('modeAdvanced').onclick = () => setMode('advanced');
+
+function setMode(mode) {
+    MODE = mode;
+    document.getElementById('modeSimple').classList.toggle('active', mode === 'simple');
+    document.getElementById('modeAdvanced').classList.toggle('active', mode === 'advanced');
+    document.getElementById('sceneSection').style.display = mode === 'advanced' ? 'block' : 'none';
+    document.getElementById('transformSection').style.display = mode === 'advanced' ? 'block' : 'none';
+    document.getElementById('btnMagnet').style.display = mode === 'advanced' ? 'inline-block' : 'none';
+    document.getElementById('btnRoomSettings').style.display = mode === 'advanced' ? 'inline-block' : 'none';
+    document.getElementById('btnRuler').style.display = mode === 'advanced' ? 'inline-block' : 'none';
+    document.getElementById('btnClearRulers').style.display = mode === 'advanced' ? 'inline-block' : 'none';
+    wall1.visible = mode === 'advanced'; wall2.visible = mode === 'advanced';
+    scene.children.slice().forEach(c => { if (c.userData.isModel) scene.remove(c); });
+    sceneItems = []; selectedItem = null; selectedMeshes = []; updateSceneList();
+    document.getElementById('selectedInfo').textContent = 'Кликните по детали модели';
+}
+
+document.getElementById('btnMagnet').onclick = () => { magnetEnabled = !magnetEnabled; document.getElementById('btnMagnet').classList.toggle('active', magnetEnabled); };
+document.getElementById('btnClear').onclick = () => {
+    scene.children.slice().forEach(c => { if (c.userData.isModel) scene.remove(c); });
+    sceneItems = []; selectedItem = null; selectedMeshes = []; updateSceneList();
+    document.getElementById('selectedInfo').textContent = 'Кликните по детали модели';
+};
+
+function focusCamera() {
+    const box = new THREE.Box3();
+    scene.children.forEach(c => { if (c.userData.isModel) box.expandByObject(c); });
+    if (!box.isEmpty()) {
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3()).length();
+        controls.target.copy(center);
+        controls.spherical.radius = Math.max(size * 2.5, 1000);
+        controls.update();
+    }
+}
+
+document.getElementById('btnRoomSettings').onclick = async () => { document.getElementById('roomModal').classList.add('show'); await loadWallpaperList(); };
+document.getElementById('btnCloseRoom').onclick = () => document.getElementById('roomModal').classList.remove('show');
+
+async function loadWallpaperList() {
+    const grid = document.getElementById('wallpaperGrid');
+    const currentSelected = document.querySelector('#wallpaperGrid .wallpaper-item.selected');
+    const currentValue = currentSelected ? currentSelected.dataset.value : '';
+    grid.innerHTML = '<div class="wallpaper-item no-texture selected" data-value="">Сплошной цвет</div>';
+    try {
+        const response = await fetch('textures/oboi/wallpapers.json');
+        if (response.ok) {
+            const list = await response.json();
+            list.forEach(w => {
+                const div = document.createElement('div');
+                div.className = 'wallpaper-item';
+                div.style.backgroundImage = `url('textures/oboi/${w.file}')`;
+                div.dataset.value = `textures/oboi/${w.file}`;
+                div.title = w.name;
+                div.onclick = () => {
+                    grid.querySelectorAll('.wallpaper-item').forEach(el => el.classList.remove('selected'));
+                    div.classList.add('selected');
+                };
+                grid.appendChild(div);
+            });
+        }
+    } catch (e) { console.log('Нет списка обоев'); }
+    const items = grid.querySelectorAll('.wallpaper-item');
+    items.forEach(item => { if (item.dataset.value === currentValue) item.classList.add('selected'); });
+    if (!currentValue) items[0].classList.add('selected');
+}
+
+document.getElementById('lightIntensity').addEventListener('input', e => { document.getElementById('lightValue').textContent = e.target.value + '%'; });
+
+document.getElementById('btnApplyRoom').onclick = () => {
+    const newFloorColor = document.getElementById('floorColor').value;
+    const newWallColor = document.getElementById('wallColor').value;
+    const newLightIntensity = parseInt(document.getElementById('lightIntensity').value);
+    const selectedWallpaper = document.querySelector('#wallpaperGrid .wallpaper-item.selected');
+    const newWallTexture = selectedWallpaper ? selectedWallpaper.dataset.value : '';
+    
+    if (newFloorColor !== lastAppliedRoom.floorColor) { floorMat.color.set(newFloorColor); lastAppliedRoom.floorColor = newFloorColor; }
+    
+    if (newWallTexture !== lastAppliedRoom.wallTexture) {
+        if (newWallTexture) {
+            loadTexture(newWallTexture).then(tex => { tex.repeat.set(5, 5); wallMat.map = tex; wallMat.needsUpdate = true; });
+        } else {
+            wallMat.map = null;
+            wallMat.color.set(newWallColor); // Явно применяем цвет при выборе "Сплошной цвет"
+            wallMat.needsUpdate = true;
+        }
+        lastAppliedRoom.wallTexture = newWallTexture;
+    } else if (newWallTexture === '' && newWallColor !== lastAppliedRoom.wallColor) {
+        wallMat.color.set(newWallColor);
+        lastAppliedRoom.wallColor = newWallColor;
+    }
+    
+    if (newLightIntensity !== lastAppliedRoom.lightIntensity) {
+        const multiplier = newLightIntensity / 85;
+        dirLight.intensity = 0.8 * multiplier;
+        scene.children.forEach(c => { if (c.isAmbientLight) c.intensity = 0.6 * multiplier; });
+        lastAppliedRoom.lightIntensity = newLightIntensity;
+    }
+    document.getElementById('roomModal').classList.remove('show');
+};
+
+// ============================================================
+//  СОХРАНЕНИЕ ИЗОБРАЖЕНИЯ
+// ============================================================
+document.getElementById('btnSaveImage').onclick = () => {
+    renderer.render(scene, camera);
+    const dataURL = canvas.toDataURL('image/png');
+    document.getElementById('savePreview').src = dataURL;
+    document.getElementById('saveModal').classList.add('show');
+};
+
+document.getElementById('btnCloseSave').onclick = () => { document.getElementById('saveModal').classList.remove('show'); };
+
+document.getElementById('btnDownloadImage').onclick = () => {
+    const dataURL = document.getElementById('savePreview').src;
+    const link = document.createElement('a');
+    link.download = '3d-configurator-' + Date.now() + '.png';
+    link.href = dataURL;
+    link.click();
+    document.getElementById('saveModal').classList.remove('show');
+};
+
+// ============================================================
+//  ВКЛАДКИ ТЕКСТУР
+// ============================================================
+function updateTextureGrid() {
+    const grid = document.getElementById('textureGrid');
+    grid.innerHTML = '';
+    let textures = [];
+    if (currentTab === 'ldsp_standard') textures = standardTextures;
+    else if (currentTab === 'ldsp_fantasy') textures = fantasyTextures;
+    else if (currentTab === 'fanera') textures = paintTextures;
+    else if (currentTab === 'leather') textures = leatherTextures;
+    else if (currentTab === 'fabric') textures = fabricTextures;
+    else if (currentTab === 'metal') textures = metalTextures;
+    else if (currentTab === 'countertop') textures = countertopTextures;
+    
+    textures.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'texture-item';
+        div.style.backgroundImage = `url('${t.image}')`;
+        div.innerHTML = `<span>${t.name}</span>`;
+        div.onclick = () => applyTexture(t.image);
+        grid.appendChild(div);
+    });
+}
+updateTextureGrid();
+
+document.getElementById('tabLdsp').onclick = () => { currentTab = 'ldsp_standard'; updateTabs(); };
+document.getElementById('tabFanera').onclick = () => { currentTab = 'fanera'; updateTabs(); };
+document.getElementById('tabCountertop').onclick = () => { currentTab = 'countertop'; updateTabs(); };
+document.getElementById('tabMetal').onclick = () => { currentTab = 'metal'; updateTabs(); };
+document.getElementById('tabSoft').onclick = () => { currentTab = 'leather'; updateTabs(); };
+
+document.getElementById('tabLdspStandard').onclick = () => { currentTab = 'ldsp_standard'; updateTabs(); };
+document.getElementById('tabLdspFantasy').onclick = () => { currentTab = 'ldsp_fantasy'; updateTabs(); };
+document.getElementById('tabLeather').onclick = () => { currentTab = 'leather'; updateTabs(); };
+document.getElementById('tabFabric').onclick = () => { currentTab = 'fabric'; updateTabs(); };
+
+function updateTabs() {
+    const isLdsp = currentTab === 'ldsp_standard' || currentTab === 'ldsp_fantasy';
+    const isSoft = currentTab === 'leather' || currentTab === 'fabric';
+    
+    document.getElementById('tabLdsp').classList.toggle('active', isLdsp);
+    document.getElementById('tabFanera').classList.toggle('active', currentTab === 'fanera');
+    document.getElementById('tabCountertop').classList.toggle('active', currentTab === 'countertop');
+    document.getElementById('tabMetal').classList.toggle('active', currentTab === 'metal');
+    document.getElementById('tabSoft').classList.toggle('active', isSoft);
+
+    document.getElementById('subTabLdsp').style.display = isLdsp ? 'flex' : 'none';
+    document.getElementById('subTabSoft').style.display = isSoft ? 'flex' : 'none';
+
+    document.getElementById('tabLdspStandard').classList.toggle('active', currentTab === 'ldsp_standard');
+    document.getElementById('tabLdspFantasy').classList.toggle('active', currentTab === 'ldsp_fantasy');
+    document.getElementById('tabLeather').classList.toggle('active', currentTab === 'leather');
+    document.getElementById('tabFabric').classList.toggle('active', currentTab === 'fabric');
+
+    updateTextureGrid();
+}
+
+// ============================================================
+//  ЛИНЕЙКА (РУЧНОЕ УПРАВЛЕНИЕ ВЫНОСКОЙ + УДАЛЕНИЕ)
+// ============================================================
+let isRulerMode = false;
+let rulerPoints = [];
+let rulerGroup = new THREE.Group();
+scene.add(rulerGroup);
+let activeRulers = []; // Массив для отслеживания созданных линеек
+
+// Инициализация линии предпросмотра (ярко-зеленая, всегда поверх)
+const previewGeo = new THREE.BufferGeometry();
+previewGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(18), 3));
+const previewMat = new THREE.LineBasicMaterial({ color: 0x00ff00, depthTest: false, depthWrite: false });
+let previewLine = new THREE.LineSegments(previewGeo, previewMat);
+previewLine.renderOrder = 9999;
+previewLine.visible = false;
+scene.add(previewLine);
+
+// Красный квадрат для точки привязки (более видимый)
+const snapSquareGeo = new THREE.PlaneGeometry(12, 12);
+const snapSquareMat = new THREE.MeshBasicMaterial({ color: 0xff0000, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
+const snapSquare = new THREE.Mesh(snapSquareGeo, snapSquareMat);
+snapSquare.renderOrder = 10000;
+snapSquare.visible = false;
+scene.add(snapSquare);
+
+function orientSnapToCamera() {
+    if (!snapSquare.visible) return;
+    snapSquare.quaternion.copy(camera.quaternion);
+}
+
+function getClosestVertex(hit) {
+    const obj = hit.object;
+    if (!obj.geometry || !obj.geometry.attributes.position) return hit.point.clone();
+    const posAttr = obj.geometry.attributes.position;
+    const localHit = obj.worldToLocal(hit.point.clone());
+    let closest = null;
+    let minDist = Infinity;
+    for (let i = 0; i < posAttr.count; i++) {
+        const v = new THREE.Vector3(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+        const d = v.distanceToSquared(localHit);
+        if (d < minDist) { minDist = d; closest = v; }
+    }
+    if (!closest) return hit.point.clone();
+    return obj.localToWorld(closest.clone());
+}
+
+function updateRulerPreview(e) {
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(getMouse(e), camera);
+    const meshes = [];
+    scene.traverse(o => { if (o.isMesh && findRootModelGroup(o)) meshes.push(o); });
+    const hits = raycaster.intersectObjects(meshes, false);
+    
+    if (rulerPoints.length === 0) {
+        if (hits.length > 0) {
+            const pt = getClosestVertex(hits[0]);
+            snapSquare.position.copy(pt);
+            snapSquare.visible = true;
+        } else {
+            snapSquare.visible = false;
+        }
+        previewLine.visible = false;
+        return;
+    }
+    
+    if (rulerPoints.length === 1) {
+        if (hits.length > 0) {
+            const pt = getClosestVertex(hits[0]);
+            snapSquare.position.copy(pt);
+            snapSquare.visible = true;
+            
+            const arr = previewLine.geometry.attributes.position.array;
+            arr[0] = rulerPoints[0].x; arr[1] = rulerPoints[0].y; arr[2] = rulerPoints[0].z;
+            arr[3] = pt.x; arr[4] = pt.y; arr[5] = pt.z;
+            previewLine.geometry.attributes.position.needsUpdate = true;
+            previewLine.visible = true;
+        } else {
+            snapSquare.visible = false;
+            previewLine.visible = false;
+        }
+        return;
+    }
+    
+    if (rulerPoints.length === 2) {
+        snapSquare.visible = false;
+        const p1 = rulerPoints[0];
+        const p2 = rulerPoints[1];
+        const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
+        const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+        
+        const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()).negate(), midPoint);
+        const target = new THREE.Vector3();
+        raycaster.ray.intersectPlane(plane, target);
+        
+        if (target && previewLine) {
+            const toTarget = new THREE.Vector3().subVectors(target, midPoint);
+            const projL = toTarget.dot(dir);
+            let perp = new THREE.Vector3().subVectors(toTarget, dir.clone().multiplyScalar(projL));
+            if (perp.lengthSq() < 1e-4) perp.set(0, 0, 1);
+            
+            const e1 = p1.clone().add(perp);
+            const e2 = p2.clone().add(perp);
+            
+            const arr = previewLine.geometry.attributes.position.array;
+            arr[0] = p1.x; arr[1] = p1.y; arr[2] = p1.z;
+            arr[3] = e1.x; arr[4] = e1.y; arr[5] = e1.z;
+            arr[6] = p2.x; arr[7] = p2.y; arr[8] = p2.z;
+            arr[9] = e2.x; arr[10] = e2.y; arr[11] = e2.z;
+            arr[12] = e1.x; arr[13] = e1.y; arr[14] = e1.z;
+            arr[15] = e2.x; arr[16] = e2.y; arr[17] = e2.z;
+            previewLine.geometry.attributes.position.needsUpdate = true;
+            previewLine.visible = true;
+        }
+    }
+}
+
+function commitRulerPoint(e) {
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(getMouse(e), camera);
+    const meshes = [];
+    scene.traverse(o => { if (o.isMesh && findRootModelGroup(o)) meshes.push(o); });
+    const hits = raycaster.intersectObjects(meshes, false);
+    
+    if (rulerPoints.length < 2) {
+        let usePoint = null;
+        if (hits.length > 0) {
+            const snapPt = getClosestVertex(hits[0]);
+            usePoint = snapPt.clone();
+        }
+        
+        if (!usePoint && hits.length > 0) {
+            usePoint = hits[0].point.clone();
+        }
+        
+        if (usePoint) {
+            rulerPoints.push(usePoint);
+            snapSquare.visible = false;
+            previewLine.visible = false;
+        }
+        return;
+    }
+    
+    if (rulerPoints.length === 2) {
+        const p1 = rulerPoints[0];
+        const p2 = rulerPoints[1];
+        const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
+        const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+        
+        const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()).negate(), midPoint);
+        const target = new THREE.Vector3();
+        raycaster.ray.intersectPlane(plane, target);
+        
+        if (target) {
+            const toTarget = new THREE.Vector3().subVectors(target, midPoint);
+            const projL = toTarget.dot(dir);
+            let perp = new THREE.Vector3().subVectors(toTarget, dir.clone().multiplyScalar(projL));
+            if (perp.lengthSq() < 1e-4) perp.set(0, 0, 1);
+            
+            createRulerDimension(p1, p2, perp);
+        }
+        
+        rulerPoints = [];
+        snapSquare.visible = false;
+        previewLine.visible = false;
+    }
+}
+
+function createRulerDimension(p1, p2, offset) {
+    const distance = p1.distanceTo(p2);
+    const e1 = p1.clone().add(offset);
+    const e2 = p2.clone().add(offset);
+    const rulerId = 'ruler_' + Date.now();
+    
+    const lineGeo = new THREE.BufferGeometry().setFromPoints([p1, e1, p2, e2, e1, e2]);
+    const lineMat = new THREE.LineBasicMaterial({ color: 0xff4a4a, linewidth: 2, depthTest: false });
+    const lines = new THREE.LineSegments(lineGeo, lineMat);
+    lines.userData.isRuler = true;
+    lines.userData.rulerId = rulerId;
+    rulerGroup.add(lines);
+    
+    const midPoint = new THREE.Vector3().addVectors(e1, e2).multiplyScalar(0.5);
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = 256;
+    canvas.height = 64;
+    context.fillStyle = 'rgba(255, 74, 74, 0.9)';
+    context.fillRect(0, 0, 256, 64);
+    context.fillStyle = '#ffffff';
+    context.font = 'bold 32px Arial';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(distance.toFixed(1) + ' мм', 128, 32);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.position.copy(midPoint);
+    sprite.scale.set(200, 50, 1);
+    sprite.userData.isRuler = true;
+    sprite.userData.rulerId = rulerId;
+    rulerGroup.add(sprite);
+    
+    activeRulers.push({ id: rulerId, lines: lines, sprite: sprite });
+}
+
+document.getElementById('btnRuler').onclick = () => {
+    isRulerMode = !isRulerMode;
+    document.getElementById('btnRuler').classList.toggle('active', isRulerMode);
+    document.getElementById('btnClearRulers').style.display = isRulerMode ? 'inline-block' : 'none';
+    canvas.style.cursor = isRulerMode ? 'crosshair' : 'default';
+    if (!isRulerMode) {
+        rulerPoints = [];
+        snapSquare.visible = false;
+        previewLine.visible = false;
+    }
+};
+
+document.getElementById('btnClearRulers').onclick = () => {
+    activeRulers.forEach(r => {
+        rulerGroup.remove(r.lines);
+        rulerGroup.remove(r.sprite);
+    });
+    activeRulers = [];
+    showFlash("Все линейки удалены");
+};
+
+// ============================================================
+//  ГАБАРИТНЫЕ РАЗМЕРЫ
+// ============================================================
+let dimensionsGroup = new THREE.Group();
+scene.add(dimensionsGroup);
+
+function getPerpendicular(dir) {
+    if (Math.abs(dir.y) > 0.9) return new THREE.Vector3(1, 0, 0);
+    return new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+}
+
+function drawDimLine(p1, p2, text, perp) {
+    const offset = 60;
+    const start = p1.clone().add(perp.clone().multiplyScalar(offset));
+    const end = p2.clone().add(perp.clone().multiplyScalar(offset));
+    
+    const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+    const material = new THREE.LineBasicMaterial({ color: 0x4a7cff, linewidth: 2, depthTest: false });
+    const line = new THREE.Line(geometry, material);
+    dimensionsGroup.add(line);
+    
+    const tickLen = 15;
+    const tick1 = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+        start.clone().add(perp.clone().multiplyScalar(tickLen)),
+        start.clone().sub(perp.clone().multiplyScalar(tickLen))
+    ]), material);
+    const tick2 = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+        end.clone().add(perp.clone().multiplyScalar(tickLen)),
+        end.clone().sub(perp.clone().multiplyScalar(tickLen))
+    ]), material);
+    dimensionsGroup.add(tick1);
+    dimensionsGroup.add(tick2);
+
+    const midPoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = 256;
+    canvas.height = 64;
+    context.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    context.fillRect(0, 0, 256, 64);
+    context.strokeStyle = '#4a7cff';
+    context.lineWidth = 4;
+    context.strokeRect(0, 0, 256, 64);
+    context.fillStyle = '#333';
+    context.font = 'bold 28px Arial';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(text, 128, 32);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.position.copy(midPoint);
+    sprite.position.add(perp.clone().multiplyScalar(40));
+    sprite.scale.set(300, 75, 1);
+    dimensionsGroup.add(sprite);
+}
+
+document.getElementById('showDimensionsCheckbox').addEventListener('change', (e) => {
+    while(dimensionsGroup.children.length > 0){ 
+        const obj = dimensionsGroup.children[0];
+        dimensionsGroup.remove(obj);
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) {
+            if (obj.material.map) obj.material.map.dispose();
+            obj.material.dispose();
+        }
+    }
+
+    if (!e.target.checked) return;
+
+    const groupsToMeasure = [];
+    if (MODE === 'simple') {
+        scene.children.forEach(c => { if (c.userData.isModel) groupsToMeasure.push(c); });
+    } else {
+        sceneItems.forEach(item => {
+            const group = scene.children.find(c => c.userData.sceneItem === item);
+            if (group) groupsToMeasure.push(group);
+        });
+    }
+
+    groupsToMeasure.forEach(group => {
+        const box = new THREE.Box3();
+        let hasParts = false;
+		group.traverse(obj => {
+			if (!obj.isMesh) return;
+			if (obj.userData.paintCategory === 'furniture') return;
+			const parentName = obj.userData.parentGroup?.userData?.name || '';
+			if (parentName.startsWith('Ручка')) return;
+			const objBox = new THREE.Box3().setFromObject(obj);
+			box.union(objBox);
+			hasParts = true;
+		});
+        
+        if (!hasParts) return;
+
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        
+        // Ширина (X) - сверху спереди
+        const dirX = new THREE.Vector3(1, 0, 0);
+        const perpX = new THREE.Vector3(0, 1, 0); // Вверх
+		drawDimLine(
+		new THREE.Vector3(box.min.x, box.max.y, box.min.z),
+		new THREE.Vector3(box.max.x, box.max.y, box.min.z),
+		`Ш: ${Math.round(size.x)}`, perpX
+		);
+        
+        // Высота (Y) - справа спереди
+        const dirY = new THREE.Vector3(0, 1, 0);
+        const perpY = new THREE.Vector3(1, 0, 0); // Вправо
+		drawDimLine(
+		new THREE.Vector3(box.max.x, box.min.y, box.min.z),
+		new THREE.Vector3(box.max.x, box.max.y, box.min.z),
+		`В: ${Math.round(size.y)}`, perpY
+		);
+        
+		// Глубина (Z) - сверху слева
+		const dirZ = new THREE.Vector3(0, 0, 1);
+		const perpZ = new THREE.Vector3(0, 1, 0); // Вверх
+		drawDimLine(
+		new THREE.Vector3(box.min.x, box.max.y, box.min.z),
+		new THREE.Vector3(box.min.x, box.max.y, box.max.z),
+		`Г: ${Math.ceil(size.z)}`, perpZ
+		);
+    });
+});
+
+// ============================================================
+//  ПРОЧЕЕ
+// ============================================================
+let flashTimeout;
+function showFlash(text) {
+    const el = document.getElementById('flash');
+    el.textContent = text; el.style.opacity = '1';
+    clearTimeout(flashTimeout);
+    flashTimeout = setTimeout(() => el.style.opacity = '0', 1500);
+}
+
+function animate() { 
+    requestAnimationFrame(animate); 
+    orientSnapToCamera();
+    renderer.render(scene, camera); 
+}
+animate();
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+document.getElementById('btnHelp').onclick = () => {
+    document.getElementById('helpModal').classList.add('show');
+};
+
+loadCatalog();
+</script>
+</body>
+</html>
